@@ -3,7 +3,9 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>Kalkulator Kalorija i Planiranje Obroka</title>
     <link rel="stylesheet" href="style.css" />
 </head>
@@ -15,26 +17,26 @@
         <div class="card">
             <h2>Izračunaj Dnevni Cilj</h2>
             <div class="input-group">
-                <label>Pol</label>
+                <label for="gender">Pol</label>
                 <select id="gender">
                     <option value="female">Žensko</option>
                     <option value="male">Muško</option>
                 </select>
             </div>
             <div class="input-group">
-                <label>Težina (kg)</label>
-                <input type="number" id="weight" placeholder="70" min="30" max="300" />
+                <label for="weight">Težina (kg)</label>
+                <input type="number" id="weight" placeholder="70" min="30" max="300" inputmode="decimal" />
             </div>
             <div class="input-group">
-                <label>Visina (cm)</label>
-                <input type="number" id="height" placeholder="175" min="100" max="250" />
+                <label for="height">Visina (cm)</label>
+                <input type="number" id="height" placeholder="175" min="100" max="250" inputmode="decimal" />
             </div>
             <div class="input-group">
-                <label>Godine</label>
-                <input type="number" id="age" placeholder="30" min="15" max="100" />
+                <label for="age">Godine</label>
+                <input type="number" id="age" placeholder="30" min="15" max="100" inputmode="numeric" />
             </div>
             <div class="input-group">
-                <label>Nivo Aktivnosti</label>
+                <label for="activity">Nivo Aktivnosti</label>
                 <select id="activity">
                     <option value="1.2">Sedentarno – malo ili nimalo vežbe</option>
                     <option value="1.375" selected>
@@ -52,7 +54,7 @@
                 </select>
             </div>
             <div class="input-group">
-                <label>Vaš Cilj</label>
+                <label for="goalType">Vaš Cilj</label>
                 <select id="goalType">
                     <option value="-20">Konzervativni deficit (-20%)</option>
                     <option value="-25" selected>Umereni deficit (-25%)</option>             
@@ -100,6 +102,7 @@
         <div class="card">
             <h2>💾 Sačuvana Jela</h2>
             <div class="saved-meals-controls">
+                <label for="savedMealsSearch" class="visually-hidden">Pretraži sačuvana jela</label>
                 <input 
                     type="text" 
                     id="savedMealsSearch" 
@@ -119,6 +122,7 @@
         <div class="card">
             <h2>Dodaj Namirnicu</h2>
             <div class="search-box">
+                <label for="searchInput" class="visually-hidden">Pretraži namirnice</label>
                 <input 
                     type="text" 
                     id="searchInput" 
@@ -133,7 +137,7 @@
         <div class="total-summary">
             <h3>UKUPNO UNETO</h3>
             <div class="progress-circle-container">
-                <div class="progress-circle" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-circle" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Procenat dnevnog cilja">
                     <div class="progress-circle-inner">
                         <span id="totalCalories">0</span> kcal
                     </div>
@@ -166,7 +170,7 @@
         <div class="edit-panel-content" onclick="event.stopPropagation()">
             <div class="edit-panel-header">
                 <h2>✏️ Editovanje Jela: <span id="editMealName"></span></h2>
-                <button class="btn-close-edit" onclick="cancelEditMode()">✕</button>
+                <button class="btn-close-edit" onclick="cancelEditMode()" aria-label="Zatvori panel">✕</button>
             </div>
             
             <div class="edit-panel-body">
@@ -179,6 +183,7 @@
                 <div class="edit-add-section">
                     <h3>Dodaj Novu Namirnicu</h3>
                     <div class="search-box">
+                        <label for="editSearchInput" class="visually-hidden">Pretraži namirnice</label>
                         <input 
                             type="text" 
                             id="editSearchInput" 

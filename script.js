@@ -22,6 +22,18 @@ const mealNames = {
 };
 
 // ========================================
+// HELPER FUNKCIJE
+// ========================================
+
+// FIX #3: Sanitizacija protiv XSS napada
+function sanitizeHTML(str) {
+    if (typeof str !== 'string') return str;
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ========================================
 // INICIJALIZACIJA
 // ========================================
 
@@ -45,6 +57,51 @@ function init() {
 // KALKULATOR CILJEVA
 // ========================================
 
+// FIX #1: Odvojena funkcija za rekalkulaciju iz sačuvanog stanja
+function recalculateFromSavedState() {
+    const gender = document.getElementById('gender').value;
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value);
+    const age = parseFloat(document.getElementById('age').value);
+    const activity = parseFloat(document.getElementById('activity').value);
+    const goalPercentage = parseFloat(document.getElementById('goalType').value);
+
+    // Ako podaci nisu potpuni, ne računaj
+    if (!weight || !height || !age) return;
+
+    let bmr;
+    if (gender === 'female') {
+        bmr = 655 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
+    } else {
+        bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
+    }
+    
+    const tdee = bmr * activity;
+    const difference = tdee * (goalPercentage / 100);
+    dailyGoal = Math.round(tdee + difference);
+
+    document.getElementById('dailyGoal').textContent = dailyGoal;
+    
+    // Ažuriranje tekstualnog opisa (UI)
+    const deficitValueEl = document.getElementById('deficitValue');
+    const goalDescEl = document.getElementById('goalDescription');
+    const selectEl = document.getElementById('goalType');
+    
+    const selectedOption = [...selectEl.options].find(o => o.value == goalPercentage);
+    const selectedText = selectedOption ? selectedOption.text : "Cilj";
+
+    deficitValueEl.textContent = Math.round(difference) + (difference > 0 ? '+' : '');
+    goalDescEl.textContent = selectedText;
+    
+    const formulaText = gender === 'female' 
+        ? 'Harris-Benedict formula (žene)' 
+        : 'Harris-Benedict formula (muškarci)';
+    document.getElementById('formulaUsed').textContent = formulaText;
+    
+    document.getElementById('result').style.display = 'block';
+    updateTotals();
+}
+
 function calculate(event) {
     const gender = document.getElementById('gender').value;
     const weight = parseFloat(document.getElementById('weight').value);
@@ -53,17 +110,11 @@ function calculate(event) {
     const activity = parseFloat(document.getElementById('activity').value);
     const goalPercentage = parseFloat(document.getElementById('goalType').value);
 
-    // Validacija samo ako korisnik klikne dugme, ali ne i pri automatskom učitavanju
-    // (Ovo sprečava alert pri refresh-u ako su polja prazna)
-    const isManualClick = event && event.type === 'click';
-    
-    if ((!weight || !height || !age) && isManualClick) {
+    // Validacija - prikazuj alert samo na klik korisnika
+    if (!weight || !height || !age) {
         alert('Molimo popunite sva polja!');
         return;
     }
-
-    // Ako podaci nisu potpuni, ne računaj (bitno za load)
-    if (!weight || !height || !age) return;
 
     let bmr;
     if (gender === 'female') {
@@ -156,7 +207,8 @@ function loadAppState() {
     if (storedMeals && storedCount) {
         try {
             meals = JSON.parse(storedMeals);
-            currentMealCount = parseInt(storedCount);
+            // FIX #4: parseInt sa radix 10
+            currentMealCount = parseInt(storedCount, 10);
             
             // Ažuriraj dugmad za broj obroka
             document.querySelectorAll('.meal-count-btn').forEach(btn => {
@@ -169,9 +221,9 @@ function loadAppState() {
         }
     }
 
-    // 3. BITNO: Pozovi calculate() da bi se osvežio UI (tekst cilja, deficit, kalorije)
+    // FIX #1: Koristi odvojenu funkciju za rekalkulaciju
     if (shouldRecalculate) {
-        calculate();
+        recalculateFromSavedState();
     }
 }
 
@@ -246,7 +298,7 @@ function renderMeals() {
                 
                 <div class="meal-header">
                     <div class="meal-title-group">
-                        <div class="meal-name">${meal.name}</div>
+                        <div class="meal-name">${sanitizeHTML(meal.name)}</div>
                         <button class="btn-clear-meal" onclick="event.stopPropagation(); clearMeal(${index})" title="Obriši sve iz ovog obroka">🗑️</button>
                     </div>
                     <div class="meal-calories">${stats.calories} kcal</div>
@@ -283,7 +335,7 @@ function renderDishItem(dish, mealIndex, itemIndex) {
         <div class="meal-food-item dish-item">
             <div class="dish-header" onclick="event.stopPropagation(); toggleDishDetails(${mealIndex}, ${itemIndex})">
                 <div class="meal-food-info">
-                    <div class="meal-food-name">🍽️ ${dish.name}</div>
+                    <div class="meal-food-name">🍽️ ${sanitizeHTML(dish.name)}</div>
                     <div class="meal-food-macros">
                         ${dish.servingGrams}g (${dish.servingPercent}%) • 
                         P: ${dishStats.protein}g M: ${dishStats.fat}g UH: ${dishStats.carbs}g
@@ -296,7 +348,7 @@ function renderDishItem(dish, mealIndex, itemIndex) {
                     <div class="dish-details-header">Sastojci (ukupno ${dish.totalGrams}g):</div>
                     ${dish.ingredients.map(ing => `
                         <div class="dish-ingredient">
-                            • ${ing.name}: ${ing.amount}${ing.unit}
+                            • ${sanitizeHTML(ing.name)}: ${ing.amount}${sanitizeHTML(ing.unit)}
                         </div>
                     `).join('')}
                 </div>
@@ -330,7 +382,7 @@ function renderFoodItem(food, mealIndex, itemIndex) {
     return `
         <div class="meal-food-item">
             <div class="meal-food-info">
-                <div class="meal-food-name">${food.name}</div>
+                <div class="meal-food-name">${sanitizeHTML(food.name)}</div>
                 <div class="meal-food-macros">P: ${macros.protein}g | M: ${macros.fat}g | UH: ${macros.carbs}g</div>
             </div>
             <div class="meal-food-controls">
@@ -345,7 +397,7 @@ function renderFoodItem(food, mealIndex, itemIndex) {
                         onchange="setAmount(${mealIndex}, ${itemIndex}, this.value)"
                         onclick="event.stopPropagation()"
                     >
-                    <span class="quantity-unit">${food.unit}</span>
+                    <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
                 </div>
                 <button class="quantity-btn" onclick="event.stopPropagation(); adjustQuantity(${mealIndex}, ${itemIndex}, 1)">+</button>
                 <div class="meal-food-cals">${cals} kcal</div>
@@ -609,7 +661,7 @@ function renderSavedMeals() {
         return `
             <div class="saved-meal" data-meal-index="${index}">
                 <div class="saved-meal-header">
-                    <div class="saved-meal-name">${meal.name}</div>
+                    <div class="saved-meal-name">${sanitizeHTML(meal.name)}</div>
                     <div class="saved-meal-calories">${stats.calories} kcal</div>
                 </div>
                 <div class="saved-meal-macros">
@@ -619,7 +671,7 @@ function renderSavedMeals() {
                     <span class="saved-macro-item">Tež: ${stats.totalGrams}g</span>
                 </div>
                 <div class="saved-meal-ingredients">
-                    ${meal.foods.map(f => `<span class="ingredient-tag">${f.name} ${f.amount}${f.unit}</span>`).join('')}
+                    ${meal.foods.map(f => `<span class="ingredient-tag">${sanitizeHTML(f.name)} ${f.amount}${sanitizeHTML(f.unit)}</span>`).join('')}
                 </div>
                 <div class="saved-meal-actions">
                     <button class="btn-small btn-add" data-action="add"><span class="btn-icon">➕</span><span class="btn-text">Dodaj</span></button>
@@ -702,14 +754,14 @@ function renderEditFoodsList() {
         return `
             <div class="edit-food-item">
                 <div class="edit-food-info">
-                    <div class="edit-food-name">${food.name}</div>
-                    <div class="edit-food-macros">${food.amount}${food.unit} • ${cals} kcal • P:${macros.protein} M:${macros.fat} UH:${macros.carbs}</div>
+                    <div class="edit-food-name">${sanitizeHTML(food.name)}</div>
+                    <div class="edit-food-macros">${food.amount}${sanitizeHTML(food.unit)} • ${cals} kcal • P:${macros.protein} M:${macros.fat} UH:${macros.carbs}</div>
                 </div>
                 <div class="edit-food-controls">
                     <button class="quantity-btn" onclick="adjustEditQuantity(${index}, -1)">−</button>
                     <div class="quantity-input-wrapper">
                         <input type="number" class="quantity-input" value="${food.amount}" min="${food.unit==='kom'?1:10}" step="${food.unit==='kom'?1:10}" onchange="setEditAmount(${index}, this.value)">
-                        <span class="quantity-unit">${food.unit}</span>
+                        <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
                     </div>
                     <button class="quantity-btn" onclick="adjustEditQuantity(${index}, 1)">+</button>
                     <button class="quantity-btn delete-btn" onclick="removeFromEdit(${index})">×</button>
@@ -741,8 +793,8 @@ function renderEditFoods() {
         const originalIndex = foods.indexOf(food);
         return `
         <div class="food-item" onclick="addFoodToEdit(foods[${originalIndex}])">
-            <span class="food-name">${food.name}</span>
-            <span class="food-calories">${food.calories} kcal / ${food.serving}${food.unit}</span>
+            <span class="food-name">${sanitizeHTML(food.name)}</span>
+            <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
         </div>
     `}).join('');
 }
@@ -815,12 +867,18 @@ function exportMeals() {
     URL.revokeObjectURL(url);
 }
 
+// FIX #2: Memory leak - čišćenje input elementa nakon upotrebe
 function importMeals() {
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.json';
+    input.type = 'file';
+    input.accept = '.json';
+    
     input.onchange = (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+            input.remove(); // Očisti element ako nema fajla
+            return;
+        }
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
@@ -839,10 +897,22 @@ function importMeals() {
                 alert('Uspešno!');
             } catch (err) {
                 alert('Greška: Fajl je oštećen ili neispravan format.');
+            } finally {
+                input.remove(); // FIX: Uvek očisti input element
             }
+        };
+        reader.onerror = () => {
+            alert('Greška pri čitanju fajla.');
+            input.remove(); // FIX: Očisti i na grešku
         };
         reader.readAsText(file);
     };
+    
+    // FIX: Očisti ako korisnik otkaže dijalog
+    input.addEventListener('cancel', () => {
+        input.remove();
+    });
+    
     input.click();
 }
 
@@ -930,8 +1000,8 @@ function renderFoods() {
         const originalIndex = foods.indexOf(food);
         return `
         <div class="food-item" onclick="addFoodToMeal(foods[${originalIndex}])">
-            <span class="food-name">${food.name}</span>
-            <span class="food-calories">${food.calories} kcal / ${food.serving}${food.unit}</span>
+            <span class="food-name">${sanitizeHTML(food.name)}</span>
+            <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
         </div>
     `}).join('');
 }
