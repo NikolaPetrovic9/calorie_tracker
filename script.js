@@ -45,7 +45,7 @@ function init() {
 // KALKULATOR CILJEVA
 // ========================================
 
-function calculate() {
+function calculate(event) {
     const gender = document.getElementById('gender').value;
     const weight = parseFloat(document.getElementById('weight').value);
     const height = parseFloat(document.getElementById('height').value);
@@ -54,8 +54,8 @@ function calculate() {
     const goalPercentage = parseFloat(document.getElementById('goalType').value);
 
     // Validacija samo ako korisnik klikne dugme, ali ne i pri automatskom učitavanju
-    // (Ovo sprečava alert pri refreshu ako su polja prazna)
-    const isManualClick = window.event && window.event.type === 'click';
+    // (Ovo sprečava alert pri refresh-u ako su polja prazna)
+    const isManualClick = event && event.type === 'click';
     
     if ((!weight || !height || !age) && isManualClick) {
         alert('Molimo popunite sva polja!');
@@ -130,32 +130,43 @@ function loadAppState() {
     let shouldRecalculate = false;
 
     if (storedSettings) {
-        const s = JSON.parse(storedSettings);
-        if (s.gender) document.getElementById('gender').value = s.gender;
-        if (s.weight) document.getElementById('weight').value = s.weight;
-        if (s.height) document.getElementById('height').value = s.height;
-        if (s.age) document.getElementById('age').value = s.age;
-        if (s.activity) document.getElementById('activity').value = s.activity;
-        if (s.goalType) document.getElementById('goalType').value = s.goalType;
-        
-        // Ako je rezultat bio vidljiv, želimo da se ponovo izračuna i prikaže
-        if (s.resultVisible === 'block') {
-            shouldRecalculate = true;
+        try {
+            const s = JSON.parse(storedSettings);
+            if (s.gender) document.getElementById('gender').value = s.gender;
+            if (s.weight) document.getElementById('weight').value = s.weight;
+            if (s.height) document.getElementById('height').value = s.height;
+            if (s.age) document.getElementById('age').value = s.age;
+            if (s.activity) document.getElementById('activity').value = s.activity;
+            if (s.goalType) document.getElementById('goalType').value = s.goalType;
+            
+            // Ako je rezultat bio vidljiv, želimo da se ponovo izračuna i prikaže
+            if (s.resultVisible === 'block') {
+                shouldRecalculate = true;
+            }
+        } catch (e) {
+            console.error("Greška pri učitavanju podešavanja kalkulatora:", e);
+            localStorage.removeItem('calcSettings');
         }
     }
 
     // 2. Učitaj obroke
     const storedMeals = localStorage.getItem('currentMeals');
     const storedCount = localStorage.getItem('currentMealCount');
-    
+
     if (storedMeals && storedCount) {
-        meals = JSON.parse(storedMeals);
-        currentMealCount = parseInt(storedCount);
-        
-        // Ažuriraj dugmad za broj obroka
-        document.querySelectorAll('.meal-count-btn').forEach(btn => {
-            btn.classList.toggle('active', Number(btn.dataset.count) === currentMealCount);
-        });
+        try {
+            meals = JSON.parse(storedMeals);
+            currentMealCount = parseInt(storedCount);
+            
+            // Ažuriraj dugmad za broj obroka
+            document.querySelectorAll('.meal-count-btn').forEach(btn => {
+                btn.classList.toggle('active', Number(btn.dataset.count) === currentMealCount);
+            });
+        } catch (e) {
+            console.error("Greška pri učitavanju obroka:", e);
+            localStorage.removeItem('currentMeals');
+            localStorage.removeItem('currentMealCount');
+        }
     }
 
     // 3. BITNO: Pozovi calculate() da bi se osvežio UI (tekst cilja, deficit, kalorije)
@@ -841,6 +852,7 @@ function importMeals() {
 
 function updateTotals() {
     let tCal=0, tPro=0, tFat=0, tCarb=0;
+    const progressCircle = document.querySelector('.progress-circle');
     meals.forEach(m => {
         const s = calculateMealStats(m);
         tCal+=s.calories; tPro+=s.protein; tFat+=s.fat; tCarb+=s.carbs;
@@ -871,9 +883,24 @@ function updateTotals() {
         const rem = dailyGoal - tCal;
         const el = document.getElementById('remaining');
         el.textContent = rem >= 0 ? `${Math.round(rem)} kcal` : `Prekoračenje: ${Math.abs(Math.round(rem))} kcal`;
-        el.style.color = rem < 0 ? '#ffcccc' : 'white';
+        el.style.color = rem < 0 ? '#f87171' : 'white'; // Jača crvena boja za bolju vidljivost
+
+        // Ažuriranje kružnog grafikona
+        const percent = Math.min(Math.round((tCal / dailyGoal) * 100), 100);
+        progressCircle.style.setProperty('--progress-percent', `${percent}%`);
+        progressCircle.setAttribute('aria-valuenow', percent);
+
+        // Ako je prekoračeno, oboji ceo krug u crveno
+        if (tCal > dailyGoal) {
+            progressCircle.style.background = 'conic-gradient(#f87171 100%, #f87171 0)';
+        } else {
+            // Vrati normalnu boju ako nije prekoračeno
+            progressCircle.style.background = `conic-gradient(#4ade80 var(--progress-percent, 0%), rgba(255, 255, 255, 0.2) 0)`;
+        }
     } else {
         document.getElementById('remaining').textContent = '-';
+        progressCircle.style.setProperty('--progress-percent', '0%');
+        progressCircle.setAttribute('aria-valuenow', 0);
     }
 }
 

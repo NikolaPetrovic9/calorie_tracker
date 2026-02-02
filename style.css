@@ -3,6 +3,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -442,10 +443,39 @@ h1 {
     opacity: 0.9;
 }
 
-.total-summary .total-calories {
-    font-size: 36px;
-    font-weight: bold;
+.progress-circle-container {
+    position: relative;
     margin-bottom: 15px;
+}
+
+.progress-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    /* Koristimo CSS varijablu koju ćemo menjati iz JS-a */
+    background: conic-gradient(#4ade80 var(--progress-percent, 0%), rgba(255, 255, 255, 0.2) 0);
+    margin: 0 auto;
+    transition: background 0.5s;
+}
+
+.progress-circle-inner {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.progress-circle-inner span {
+    font-size: 36px;
+    display: block;
 }
 
 .total-macros-grid {
@@ -719,9 +749,9 @@ h1 {
 }
 
 /* Dish item styling (jelo u obroku) */
-.dish-item {
-    background: #fff8e6 !important;
-    border: 2px solid #fbbf24 !important;
+.meal-food-item.dish-item {
+    background: #fff8e6;
+    border: 2px solid #fbbf24;
 }
 
 .dish-header {
@@ -954,28 +984,28 @@ h1 {
 }
 
 .btn-save-edit {
-    background: #4ade80 !important;
-    color: white !important;
-    font-weight: 700 !important;
-    font-size: 16px !important;
-    padding: 14px !important;
+    background: #4ade80;
+    color: white;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 14px;
 }
 
 .btn-save-edit:hover {
-    background: #22c55e !important;
+    background: #22c55e;
     transform: scale(1.02);
 }
 
 .btn-cancel {
-    background: #f87171 !important;
-    color: white !important;
-    font-weight: 700 !important;
-    font-size: 16px !important;
-    padding: 14px !important;
+    background: #f87171;
+    color: white;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 14px;
 }
 
 .btn-cancel:hover {
-    background: #e53e3e !important;
+    background: #e53e3e;
     transform: scale(1.02);
 }
 
@@ -1013,10 +1043,6 @@ h1 {
         font-size: 18px;
     }
     
-    .result .calories {
-        font-size: 28px;
-    }
-
     .meal-count-selector {
         gap: 8px;
     }
@@ -1026,19 +1052,33 @@ h1 {
         font-size: 14px;
     }
 
+    .progress-circle {
+        width: 150px;
+        height: 150px;
+    }
+
+    .progress-circle-inner {
+        width: 125px;
+        height: 125px;
+    }
+
+    .progress-circle-inner span {
+        font-size: 28px;
+    }
+
     .meal-food-controls {
         flex-wrap: wrap;
         gap: 4px;
     }
 
     .quantity-input {
-        width: 45px;
+        width: 50px;
     }
 
     .quantity-btn {
-        width: 32px;
-        height: 32px;
-        font-size: 16px;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
     }
 
     .meal-food-cals {
@@ -1060,10 +1100,6 @@ h1 {
 
     .total-macro-value {
         font-size: 18px;
-    }
-
-    .total-summary .total-calories {
-        font-size: 32px;
     }
 
     .food-list {
@@ -1174,7 +1210,7 @@ h1 {
     .meal-food-item {
         flex-direction: column;
         align-items: flex-start;
-        gap: 8px;
+    gap: 10px;
     }
 
     .meal-food-controls {

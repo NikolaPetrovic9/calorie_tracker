@@ -61,7 +61,7 @@
                 </select>
             </div>
             
-            <button class="btn" onclick="calculate()">Izračunaj Cilj</button>
+            <button class="btn" onclick="calculate(event)">Izračunaj Cilj</button>
             <div id="result" style="display: none" class="result">
                 <h3>Tvoj Dnevni Cilj</h3>
                 <div class="calories">
@@ -109,8 +109,8 @@
                     oninput="searchSavedMeals()"
                 />
                 <div class="export-import-buttons">
-                    <button class="btn-export" onclick="exportMeals()">📥 Export</button>
-                    <button class="btn-import" onclick="importMeals()">📤 Import</button>
+                    <button class="btn-export" onclick="exportMeals()">📤 Export</button>
+                    <button class="btn-import" onclick="importMeals()">📥 Import</button>
                 </div>
             </div>
             <div id="savedMealsContainer" class="saved-meals-container"></div>
@@ -132,7 +132,13 @@
 
         <div class="total-summary">
             <h3>UKUPNO UNETO</h3>
-            <div class="total-calories"><span id="totalCalories">0</span> kcal</div>
+            <div class="progress-circle-container">
+                <div class="progress-circle" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-circle-inner">
+                        <span id="totalCalories">0</span> kcal
+                    </div>
+                </div>
+            </div>
             <div class="total-macros-grid">
                 <div class="total-macro-box">
                     <div class="total-macro-label">Proteini</div>
