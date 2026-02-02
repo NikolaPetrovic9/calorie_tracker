@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="sr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kalkulator Kalorija i Planiranje Obroka</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="container">
+        <h1>🥗 Kalkulator Kalorija</h1>
+
+        <div class="card">
+            <h2>Izračunaj Dnevni Cilj</h2>
+            <div class="input-group">
+                <label>Pol</label>
+                <select id="gender">
+                    <option value="female">Žensko</option>
+                    <option value="male">Muško</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Težina (kg)</label>
+                <input type="number" id="weight" placeholder="70" min="30" max="300" />
+            </div>
+            <div class="input-group">
+                <label>Visina (cm)</label>
+                <input type="number" id="height" placeholder="175" min="100" max="250" />
+            </div>
+            <div class="input-group">
+                <label>Godine</label>
+                <input type="number" id="age" placeholder="30" min="15" max="100" />
+            </div>
+            <div class="input-group">
+                <label>Nivo Aktivnosti</label>
+                <select id="activity">
+                    <option value="1.2">Sedentarno – malo ili nimalo vežbe</option>
+                    <option value="1.375" selected>
+                        Malo aktivan – lagana vežba 3–5 dana/nedeljno
+                    </option>
+                    <option value="1.55">
+                        Umereno aktivan – umerena vežba 3–5 dana/nedeljno
+                    </option>
+                    <option value="1.725">
+                        Veoma aktivan – teška vežba 6–7 dana/nedeljno
+                    </option>
+                    <option value="1.9">
+                        Ekstremno aktivan – svakodnevna teška vežba ili dvokratni treninzi
+                    </option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Vaš Cilj</label>
+                <select id="goalType">
+                    <option value="-20">Konzervativni deficit (-20%)</option>
+                    <option value="-25" selected>Umereni deficit (-25%)</option>             
+                    <option value="-30">Agresivni deficit (-30%)</option>         
+                    <option value="0">Održavanje kilaže (0%)</option>
+                </select>
+            </div>
+            
+            <button class="btn" onclick="calculate()">Izračunaj Cilj</button>
+            <div id="result" style="display: none" class="result">
+                <h3>Tvoj Dnevni Cilj</h3>
+                <div class="calories">
+                    <span id="dailyGoal">0</span> kcal
+                </div>
+                <div class="subtitle">
+                    <span id="goalDescription"></span>
+                    (<span id="deficitValue">0</span> kcal razlike)
+                </div>
+                <div class="formula-info">
+                    Korišćena formula: <span id="formulaUsed"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Broj Obroka</h2>
+            <div class="meal-count-selector">
+                <button class="meal-count-btn active" data-count="3" onclick="setMealCount(3)">
+                    3 obroka
+                </button>
+                <button class="meal-count-btn" data-count="4" onclick="setMealCount(4)">
+                    4 obroka
+                </button>
+                <button class="meal-count-btn" data-count="5" onclick="setMealCount(5)">
+                    5 obroka
+                </button>
+            </div>
+        </div> 
+
+        <div class="card">
+            <h2>Tvoji Obroci</h2>
+            <div id="mealsContainer" class="meals-container"></div>
+        </div>
+
+        <div class="card">
+            <h2>💾 Sačuvana Jela</h2>
+            <div class="saved-meals-controls">
+                <input 
+                    type="text" 
+                    id="savedMealsSearch" 
+                    class="search-input" 
+                    placeholder="Pretraži sačuvana jela..." 
+                    autocomplete="off"
+                    oninput="searchSavedMeals()"
+                />
+                <div class="export-import-buttons">
+                    <button class="btn-export" onclick="exportMeals()">📥 Export</button>
+                    <button class="btn-import" onclick="importMeals()">📤 Import</button>
+                </div>
+            </div>
+            <div id="savedMealsContainer" class="saved-meals-container"></div>
+        </div>
+
+        <div class="card">
+            <h2>Dodaj Namirnicu</h2>
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Pretraži namirnice..." 
+                    autocomplete="off"
+                    oninput="renderFoods()" 
+                />
+            </div>
+            <div id="foodList" class="food-list"></div>
+        </div> 
+
+        <div class="total-summary">
+            <h3>UKUPNO UNETO</h3>
+            <div class="total-calories"><span id="totalCalories">0</span> kcal</div>
+            <div class="total-macros-grid">
+                <div class="total-macro-box">
+                    <div class="total-macro-label">Proteini</div>
+                    <div class="total-macro-value"><span id="totalProtein">0</span>g</div>
+                    <div class="total-macro-percent"><span id="proteinPercent">0</span>%</div>
+                </div>
+                <div class="total-macro-box">
+                    <div class="total-macro-label">Masti</div>
+                    <div class="total-macro-value"><span id="totalFat">0</span>g</div>
+                    <div class="total-macro-percent"><span id="fatPercent">0</span>%</div>
+                </div>
+                <div class="total-macro-box">
+                    <div class="total-macro-label">Ugljeni hidrati</div>
+                    <div class="total-macro-value"><span id="totalCarbs">0</span>g</div>
+                    <div class="total-macro-percent"><span id="carbsPercent">0</span>%</div>
+                </div>
+            </div>
+            <div class="remaining">
+                Preostalo: <span id="remaining">-</span> kcal
+            </div>
+        </div>
+    </div>
+
+    <div id="editPanel" class="edit-panel" style="display: none;" onclick="handleEditPanelBackdrop(event)">
+        <div class="edit-panel-content" onclick="event.stopPropagation()">
+            <div class="edit-panel-header">
+                <h2>✏️ Editovanje Jela: <span id="editMealName"></span></h2>
+                <button class="btn-close-edit" onclick="cancelEditMode()">✕</button>
+            </div>
+            
+            <div class="edit-panel-body">
+                <div class="edit-instructions">
+                    💡 Izmeni namirnice ispod, pa klikni "Sačuvaj Izmene" ili "Otkaži"
+                </div>
+                
+                <div id="editFoodsList" class="edit-foods-list"></div>
+                
+                <div class="edit-add-section">
+                    <h3>Dodaj Novu Namirnicu</h3>
+                    <div class="search-box">
+                        <input 
+                            type="text" 
+                            id="editSearchInput" 
+                            placeholder="Pretraži namirnice..." 
+                            autocomplete="off"
+                            oninput="renderEditFoods()" 
+                        />
+                    </div>
+                    <div id="editFoodList" class="food-list" style="max-height: 250px;"></div>
+                </div>
+            </div>
+            
+            <div class="edit-panel-footer">
+                <button class="btn btn-cancel" onclick="cancelEditMode()">❌ Otkaži</button>
+                <button class="btn btn-save-edit" onclick="saveEditedMeal()">✅ Sačuvaj Izmene</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="foods.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

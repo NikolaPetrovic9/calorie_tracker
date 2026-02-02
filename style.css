@@ -1,0 +1,1196 @@
+/* Osnovni reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Naslov */
+h1 {
+    color: white;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 28px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Kartice */
+.card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card h2 {
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: #667eea;
+}
+
+/* Input grupe */
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+    font-size: 14px;
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* Dugmad */
+.btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    min-height: 44px;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Rezultat kalkulatora */
+.result {
+    background: #f0f4ff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.result h3 {
+    color: #667eea;
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.result .calories {
+    font-size: 32px;
+    font-weight: bold;
+    color: #764ba2;
+}
+
+.result .subtitle {
+    font-size: 14px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.result .formula-info {
+    font-size: 12px;
+    color: #999;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+/* Odabir broja obroka */
+.meal-count-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.meal-count-btn {
+    flex: 1;
+    padding: 12px;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-height: 44px;
+}
+
+.meal-count-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+}
+
+/* Search box */
+.search-box {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 40px 12px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.search-box::after {
+    content: '🔍';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+}
+
+/* Kontejner obroka */
+.meals-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+/* Pojedinačni obrok */
+.meal {
+    background: white;
+    border: 3px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.meal.active {
+    border-color: #4ade80;
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.2);
+}
+
+.meal-actions-top {
+    margin-bottom: 8px;
+}
+
+/* MEAL HEADER UPDATES */
+.meal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.meal-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.meal-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.btn-clear-meal {
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.btn-clear-meal:hover {
+    background: #fee;
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.meal-calories {
+    font-size: 16px;
+    font-weight: 700;
+    color: #764ba2;
+}
+
+.meal-macros {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 6px 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.macro-item {
+    background: #f0f4ff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* Namirnice u obroku */
+.meal-foods {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.meal-food-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f0f4ff;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.meal-food-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.meal-food-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+}
+
+.meal-food-macros {
+    font-size: 11px;
+    color: #999;
+    font-weight: 500;
+}
+
+.meal-food-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quantity-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: white;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #667eea;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+}
+
+.quantity-btn:hover {
+    background: #667eea;
+    color: white;
+    transform: scale(1.1);
+}
+
+.quantity-btn:active {
+    transform: scale(0.95);
+}
+
+.quantity-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.quantity-input {
+    width: 50px;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    padding: 2px;
+    color: #333;
+}
+
+.quantity-input:focus {
+    outline: none;
+}
+
+.quantity-unit {
+    font-size: 12px;
+    color: #999;
+    font-weight: 500;
+}
+
+.meal-food-cals {
+    font-size: 13px;
+    font-weight: 700;
+    color: #764ba2;
+    min-width: 60px;
+    text-align: right;
+}
+
+.delete-btn {
+    background: #fee;
+    color: #e53e3e;
+}
+
+.delete-btn:hover {
+    background: #e53e3e;
+    color: white;
+}
+
+/* Lista namirnica */
+.food-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.food-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+}
+
+.food-item:hover {
+    background: #f0f4ff;
+    transform: translateX(5px);
+}
+
+.food-item:active {
+    transform: scale(0.98);
+}
+
+.food-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+}
+
+.food-calories {
+    font-size: 14px;
+    font-weight: 700;
+    color: #764ba2;
+    background: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+/* Ukupan zbir */
+.total-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.total-summary h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.total-summary .total-calories {
+    font-size: 36px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.total-macros-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.total-macro-box {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 10px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.total-macro-label {
+    font-size: 11px;
+    opacity: 0.9;
+    margin-bottom: 4px;
+}
+
+.total-macro-value {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.total-macro-percent {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+.total-summary .remaining {
+    font-size: 14px;
+    opacity: 0.9;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Prazno stanje */
+.empty-state {
+    text-align: center;
+    padding: 20px;
+    color: #999;
+    font-style: italic;
+}
+
+/* Sačuvana jela - kontrole */
+.saved-meals-controls {
+    margin-bottom: 15px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.export-import-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-export,
+.btn-import {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+}
+
+.btn-export {
+    background: #667eea;
+    color: white;
+}
+
+.btn-export:hover {
+    background: #5568d3;
+    transform: scale(1.02);
+}
+
+.btn-import {
+    background: #764ba2;
+    color: white;
+}
+
+.btn-import:hover {
+    background: #5f3a82;
+    transform: scale(1.02);
+}
+
+/* Saved meals container */
+.saved-meals-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.saved-meal {
+    background: #f0f4ff;
+    border-radius: 12px;
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    transition: all 0.2s;
+}
+
+.saved-meal:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.saved-meal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.saved-meal-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.saved-meal-calories {
+    font-size: 15px;
+    font-weight: 700;
+    color: #764ba2;
+}
+
+.saved-meal-macros {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #666;
+    flex-wrap: wrap;
+}
+
+.saved-macro-item {
+    background: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.saved-meal-ingredients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.ingredient-tag {
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.saved-meal-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.btn-small {
+    padding: 10px 8px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 44px;
+}
+
+.btn-icon {
+    font-size: 16px;
+}
+
+.btn-text {
+    font-size: 12px;
+}
+
+.btn-add {
+    background: #4ade80;
+    color: white;
+}
+
+.btn-add:hover {
+    background: #22c55e;
+    transform: scale(1.02);
+}
+
+.btn-edit {
+    background: #38bdf8;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #0ea5e9;
+    transform: scale(1.02);
+}
+
+.btn-rename {
+    background: #fbbf24;
+    color: white;
+}
+
+.btn-rename:hover {
+    background: #f59e0b;
+    transform: scale(1.02);
+}
+
+.btn-delete {
+    background: #f87171;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #e53e3e;
+    transform: scale(1.02);
+}
+
+.btn-save-meal {
+    width: 100%;
+    padding: 8px;
+    background: #4ade80;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+}
+
+.btn-save-meal:hover {
+    background: #22c55e;
+    transform: scale(1.02);
+}
+
+.btn-save-meal:active {
+    transform: scale(0.98);
+}
+
+/* Dish item styling (jelo u obroku) */
+.dish-item {
+    background: #fff8e6 !important;
+    border: 2px solid #fbbf24 !important;
+}
+
+.dish-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.expand-icon {
+    font-size: 12px;
+    color: #fbbf24;
+    font-weight: bold;
+}
+
+.dish-details {
+    background: #fffbf0;
+    padding: 10px;
+    margin-top: 8px;
+    border-radius: 6px;
+    border: 1px solid #fde68a;
+}
+
+.dish-details-header {
+    font-weight: 700;
+    color: #92400e;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.dish-ingredient {
+    font-size: 11px;
+    color: #78350f;
+    padding: 2px 0;
+    padding-left: 8px;
+}
+
+/* Custom scrollbar */
+.saved-meals-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.saved-meals-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.saved-meals-container::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.saved-meals-container::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
+}
+
+/* ========================================
+   EDIT PANEL (Overlay)
+   ======================================== */
+
+.edit-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.edit-panel-content {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.edit-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 3px solid #fbbf24;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border-radius: 16px 16px 0 0;
+}
+
+.edit-panel-header h2 {
+    margin: 0;
+    color: white;
+    font-size: 20px;
+}
+
+.edit-panel-header #editMealName {
+    color: #fffbeb;
+    font-weight: 700;
+}
+
+.btn-close-edit {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid white;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.btn-close-edit:hover {
+    background: white;
+    color: #f59e0b;
+    transform: rotate(90deg);
+}
+
+.edit-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 25px;
+}
+
+.edit-instructions {
+    background: #fffbeb;
+    border: 2px solid #fde68a;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #78350f;
+    line-height: 1.6;
+}
+
+.edit-foods-list {
+    margin-bottom: 25px;
+}
+
+.edit-food-item {
+    background: #f0f4ff;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.edit-food-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.edit-food-info {
+    flex: 1;
+}
+
+.edit-food-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.edit-food-macros {
+    font-size: 13px;
+    color: #999;
+}
+
+.edit-food-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.edit-add-section {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px dashed #d1d5db;
+}
+
+.edit-add-section h3 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #667eea;
+}
+
+.edit-panel-footer {
+    padding: 20px 25px;
+    border-top: 2px solid #e0e0e0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    background: #f8f9fa;
+    border-radius: 0 0 16px 16px;
+}
+
+.btn-save-edit {
+    background: #4ade80 !important;
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    padding: 14px !important;
+}
+
+.btn-save-edit:hover {
+    background: #22c55e !important;
+    transform: scale(1.02);
+}
+
+.btn-cancel {
+    background: #f87171 !important;
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    padding: 14px !important;
+}
+
+.btn-cancel:hover {
+    background: #e53e3e !important;
+    transform: scale(1.02);
+}
+
+.edit-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.edit-empty-state p {
+    margin: 10px 0;
+    font-size: 15px;
+}
+
+/* ========================================
+   RESPONSIVNOST - MOBILNI UREĐAJI
+   ======================================== */
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 22px;
+        margin-bottom: 20px;
+    }
+    
+    .card {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .card h2 {
+        font-size: 18px;
+    }
+    
+    .result .calories {
+        font-size: 28px;
+    }
+
+    .meal-count-selector {
+        gap: 8px;
+    }
+
+    .meal-count-btn {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .meal-food-controls {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .quantity-input {
+        width: 45px;
+    }
+
+    .quantity-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .meal-food-cals {
+        min-width: 50px;
+        font-size: 12px;
+    }
+
+    .meal-food-name {
+        font-size: 13px;
+    }
+
+    .meal-food-macros {
+        font-size: 10px;
+    }
+
+    .total-macros-grid {
+        gap: 8px;
+    }
+
+    .total-macro-value {
+        font-size: 18px;
+    }
+
+    .total-summary .total-calories {
+        font-size: 32px;
+    }
+
+    .food-list {
+        max-height: 300px;
+    }
+
+    .food-item {
+        padding: 10px;
+    }
+
+    .food-name {
+        font-size: 14px;
+    }
+
+    .meal-macros {
+        gap: 8px;
+        font-size: 11px;
+    }
+
+    .macro-item {
+        padding: 3px 6px;
+    }
+
+    .saved-meal-macros {
+        font-size: 10px;
+        gap: 6px;
+    }
+
+    .saved-meal-actions {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .btn-small {
+        padding: 8px 4px;
+        font-size: 11px;
+    }
+
+    .btn-icon {
+        font-size: 14px;
+    }
+
+    .btn-text {
+        font-size: 10px;
+    }
+
+    .dish-details {
+        padding: 8px;
+        margin-top: 6px;
+    }
+
+    .dish-ingredient {
+        font-size: 10px;
+        padding: 1px 0;
+    }
+
+    .ingredient-tag {
+        font-size: 9px;
+        padding: 2px 4px;
+    }
+
+    /* Edit panel mobile */
+    .edit-panel {
+        padding: 10px;
+    }
+    
+    .edit-panel-content {
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+    
+    .edit-panel-header {
+        padding: 15px;
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .edit-panel-header h2 {
+        font-size: 16px;
+    }
+    
+    .edit-panel-body {
+        padding: 15px;
+    }
+    
+    .edit-panel-footer {
+        grid-template-columns: 1fr;
+        padding: 15px;
+    }
+    
+    .edit-food-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .edit-food-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+/* Ekstra mali ekrani */
+@media (max-width: 360px) {
+    .total-macros-grid {
+        gap: 6px;
+    }
+
+    .meal-food-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .meal-food-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .btn-text {
+        display: none;
+    }
+    
+    .btn-small {
+        padding: 10px;
+    }
+    
+    .btn-icon {
+        font-size: 18px;
+    }
+}
