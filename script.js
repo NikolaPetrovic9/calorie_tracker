@@ -1,8 +1,43 @@
 // ========================================
 // KALKULATOR KALORIJA - FINALNA VERZIJA
+// SA FIREBASE INTEGRACIJOM
 // ========================================
 
+// Konstante
+const CALORIES_PER_GRAM = {
+    PROTEIN: 4,
+    FAT: 9,
+    CARBS: 4
+};
+
+const LOCAL_STORAGE_KEYS = {
+    CURRENT_MEALS: 'currentMeals',
+    CURRENT_MEAL_COUNT: 'currentMealCount',
+    CALC_SETTINGS: 'calcSettings',
+    // SAVED_MEALS ključ je uklonjen, sada se koristi Firebase
+};
+
+// ========================================
+// FIREBASE PODEŠAVANJA
+// ========================================
+// NALEPI OVDE SVOJ firebaseConfig OBJEKAT KOJI SI DOBIO U KORAKU 1
+const firebaseConfig = {
+    apiKey: "AIzaSyC7Lgquk2mvgxqOwS0G0MXMJiD4jzOKbTk",
+    authDomain: "colorie-calculator.firebaseapp.com",
+    databaseURL: "https://colorie-calculator-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "colorie-calculator",
+    storageBucket: "colorie-calculator.firebasestorage.app",
+    messagingSenderId: "113528951260",
+    appId: "1:113528951260:web:2b7cde7a5a8b9509a07f19"
+};
+
+// Inicijalizacija Firebase-a
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const auth = firebase.auth();
+
 // Globalne varijable
+let foods = []; // Ova lista će se sada puniti iz Firebase-a
 let meals = [];
 let activeMealIndex = 0;
 let dailyGoal = 0;
@@ -15,6 +50,9 @@ let editWorkspaceItems = [];
 let originalEditItems = [];
 
 // Imena obroka
+let initialFoodsLoaded = false;
+let initialSavedMealsLoaded = false;
+
 const mealNames = {
     3: ['Doručak', 'Ručak', 'Večera'],
     4: ['Doručak', 'Užina', 'Ručak', 'Večera'],
@@ -37,9 +75,10 @@ function sanitizeHTML(str) {
 // INICIJALIZACIJA
 // ========================================
 
-function init() {
-    loadSavedMeals(); // Učitaj bazu jela
-    loadAppState();   // Učitaj stanje, inpute i ciljeve
+function initApp() {
+    loadAppState();   // Učitaj lokalno stanje (inpute, trenutne obroke)
+    initFirebaseListeners(); // Pokreni slušanje za promene na Firebase
+    addEventListeners(); // Poveži sve dogadjaje (klikove, unose...)
     
     // Ako nema sačuvanog stanja obroka, inicijalizuj prazno
     if (meals.length === 0) {
@@ -48,17 +87,134 @@ function init() {
         renderMeals();
         updateTotals();
     }
+}
 
-    renderFoods(); // Prikazuje SVE namirnice odmah
-    renderSavedMeals();
+function setupAuth() {
+    const loginOverlay = document.getElementById('loginOverlay');
+    const appContainer = document.getElementById('appContainer');
+    const googleSignInBtn = document.getElementById('googleSignInBtn');
+    const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    auth.onAuthStateChanged(user => {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        if (user) {
+            // Korisnik je ulogovan
+            loginOverlay.style.display = 'none';
+            appContainer.style.display = 'block';
+            if (!window.appInitialized) {
+                loadingOverlay.style.display = 'flex'; // 1. Prikaži loader pre inicijalizacije
+                initApp();
+                window.appInitialized = true;
+            }
+        } else {
+            // Korisnik nije ulogovan
+            loginOverlay.style.display = 'flex';
+            appContainer.style.display = 'none';
+            window.appInitialized = false;
+            // 2. Resetuj flagove za učitavanje za sledeću prijavu
+            initialFoodsLoaded = false;
+            initialSavedMealsLoaded = false;
+        }
+    });
+
+    googleSignInBtn.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        loginError.textContent = '';
+        auth.signInWithPopup(provider)
+            .catch(error => {
+                console.error("Greška pri Google prijavi:", error);
+                loginError.textContent = 'Došlo je do greške prilikom prijave.';
+            });
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        auth.signOut();
+    });
+}
+
+function initFirebaseListeners() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    const hideLoaderIfNeeded = () => {
+        if (initialFoodsLoaded && initialSavedMealsLoaded) {
+            loadingOverlay.style.display = 'none';
+        }
+    };
+
+    // Slušaj za promene na listi namirnica
+    database.ref('foods').on('value', (snapshot) => {
+        const data = snapshot.val();
+        foods = []; // Isprazni lokalnu listu
+        if (data) {
+            // Pretvori Firebase objekat u niz, dodajući ID
+            foods = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+        }
+        // Sortiraj po abecedi za konzistentan prikaz
+        foods.sort((a, b) => a.name.localeCompare(b.name));
+        
+        renderFoods(); // Ponovo iscrtaj listu namirnica
+        if (document.getElementById('editPanel').style.display === 'flex') {
+            renderEditFoods(); // Ako je panel za editovanje jela otvoren, osveži i njegovu listu
+        }
+
+        if (!initialFoodsLoaded) {
+            initialFoodsLoaded = true;
+            hideLoaderIfNeeded();
+        }
+    });
+
+    // Slušaj za promene na sačuvanim jelima
+    database.ref('savedMeals').on('value', (snapshot) => {
+        const data = snapshot.val();
+        savedMeals = []; // Isprazni lokalnu listu
+        if (data) {
+            savedMeals = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+        }
+        renderSavedMeals(); // Ponovo iscrtaj listu sačuvanih jela
+
+        if (!initialSavedMealsLoaded) {
+            initialSavedMealsLoaded = true;
+            hideLoaderIfNeeded();
+        }
+    });
+}
+
+function addEventListeners() {
+    document.getElementById('calculateBtn').addEventListener('click', calculate);
+    document.querySelectorAll('.meal-count-btn').forEach(btn => {
+        btn.addEventListener('click', () => setMealCount(Number(btn.dataset.count)));
+    });
+    document.getElementById('mealsContainer').addEventListener('click', handleMealContainerClick);
+    document.getElementById('mealsContainer').addEventListener('change', handleMealContainerChange); // NOVO: Slušamo promene inputa
+    document.getElementById('savedMealsSearch').addEventListener('input', renderSavedMeals);
+    document.getElementById('savedMealsContainer').addEventListener('click', handleSavedMealAction);
+    document.getElementById('searchInput').addEventListener('input', renderFoods);
+    document.getElementById('foodList').addEventListener('click', handleFoodListAction);
+    document.getElementById('addNewFoodBtn').addEventListener('click', () => openFoodForm());
+
+    // Event listeneri za edit panel jela
+    const editPanel = document.getElementById('editPanel');
+    editPanel.addEventListener('click', handleEditPanelClick);
+    document.getElementById('editSearchInput').addEventListener('input', renderEditFoods);
+    // Novi, delegirani listeneri za interakcije unutar edit panela
+    document.getElementById('editFoodsList').addEventListener('click', handleEditWorkspaceClick);
+    document.getElementById('editFoodsList').addEventListener('change', handleEditWorkspaceChange); // NOVO: Slušamo promene inputa u edit panelu
+    document.getElementById('editPanelFoodSearchList').addEventListener('click', handleEditPanelSearchListClick);
+
+    // Event listeneri za modal za dodavanje/editovanje namirnica
+    const foodModal = document.getElementById('foodFormModal');
+    foodModal.addEventListener('click', handleFoodFormModalClick); // Za zatvaranje na klik pozadine
+    document.getElementById('foodForm').addEventListener('submit', saveFood); // Za submit forme
+    document.getElementById('saveFoodBtn').addEventListener('click', () => document.getElementById('foodForm').requestSubmit()); // Povezivanje dugmeta van forme
 }
 
 // ========================================
 // KALKULATOR CILJEVA
 // ========================================
 
-// FIX #1: Odvojena funkcija za rekalkulaciju iz sačuvanog stanja
-function recalculateFromSavedState() {
+function updateGoalCalculationUI() {
     const gender = document.getElementById('gender').value;
     const weight = parseFloat(document.getElementById('weight').value);
     const height = parseFloat(document.getElementById('height').value);
@@ -66,7 +222,6 @@ function recalculateFromSavedState() {
     const activity = parseFloat(document.getElementById('activity').value);
     const goalPercentage = parseFloat(document.getElementById('goalType').value);
 
-    // Ako podaci nisu potpuni, ne računaj
     if (!weight || !height || !age) return;
 
     let bmr;
@@ -75,14 +230,13 @@ function recalculateFromSavedState() {
     } else {
         bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
     }
-    
+
     const tdee = bmr * activity;
     const difference = tdee * (goalPercentage / 100);
     dailyGoal = Math.round(tdee + difference);
 
     document.getElementById('dailyGoal').textContent = dailyGoal;
     
-    // Ažuriranje tekstualnog opisa (UI)
     const deficitValueEl = document.getElementById('deficitValue');
     const goalDescEl = document.getElementById('goalDescription');
     const selectEl = document.getElementById('goalType');
@@ -93,64 +247,24 @@ function recalculateFromSavedState() {
     deficitValueEl.textContent = Math.round(difference) + (difference > 0 ? '+' : '');
     goalDescEl.textContent = selectedText;
     
-    const formulaText = gender === 'female' 
-        ? 'Harris-Benedict formula (žene)' 
-        : 'Harris-Benedict formula (muškarci)';
-    document.getElementById('formulaUsed').textContent = formulaText;
-    
+    document.getElementById('formulaUsed').textContent = `Harris-Benedict (${gender === 'female' ? 'žene' : 'muškarci'})`;
     document.getElementById('result').style.display = 'block';
     updateTotals();
 }
 
-function calculate(event) {
-    const gender = document.getElementById('gender').value;
-    const weight = parseFloat(document.getElementById('weight').value);
-    const height = parseFloat(document.getElementById('height').value);
-    const age = parseFloat(document.getElementById('age').value);
-    const activity = parseFloat(document.getElementById('activity').value);
-    const goalPercentage = parseFloat(document.getElementById('goalType').value);
+function recalculateFromSavedState() {
+    if (!document.getElementById('weight').value || !document.getElementById('height').value || !document.getElementById('age').value) return;
+    updateGoalCalculationUI();
+}
 
-    // Validacija - prikazuj alert samo na klik korisnika
-    if (!weight || !height || !age) {
+function calculate(event) {
+    event.preventDefault();
+    if (!document.getElementById('weight').value || !document.getElementById('height').value || !document.getElementById('age').value) {
         alert('Molimo popunite sva polja!');
         return;
     }
-
-    let bmr;
-    if (gender === 'female') {
-        bmr = 655 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
-    } else {
-        bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
-    }
-    
-    const tdee = bmr * activity;
-    const difference = tdee * (goalPercentage / 100);
-    dailyGoal = Math.round(tdee + difference);
-
-    document.getElementById('dailyGoal').textContent = dailyGoal;
-    
-    // Ažuriranje tekstualnog opisa (UI)
-    const deficitValueEl = document.getElementById('deficitValue');
-    const goalDescEl = document.getElementById('goalDescription');
-    const selectEl = document.getElementById('goalType');
-    
-    // Moramo naći text opcije na osnovu value-a
-    const selectedOption = [...selectEl.options].find(o => o.value == goalPercentage);
-    const selectedText = selectedOption ? selectedOption.text : "Cilj";
-
-    deficitValueEl.textContent = Math.round(difference) + (difference > 0 ? '+' : '');
-    goalDescEl.textContent = selectedText;
-    
-    const formulaText = gender === 'female' 
-        ? 'Harris-Benedict formula (žene)' 
-        : 'Harris-Benedict formula (muškarci)';
-    document.getElementById('formulaUsed').textContent = formulaText;
-    
-    document.getElementById('result').style.display = 'block';
-    
-    // Čuvamo sve u storage nakon svakog proračuna
+    updateGoalCalculationUI();
     saveAppState();
-    updateTotals();
 }
 
 // ========================================
@@ -159,8 +273,8 @@ function calculate(event) {
 
 function saveAppState() {
     // 1. Čuvamo trenutne obroke
-    localStorage.setItem('currentMeals', JSON.stringify(meals));
-    localStorage.setItem('currentMealCount', currentMealCount);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.CURRENT_MEALS, JSON.stringify(meals));
+    localStorage.setItem(LOCAL_STORAGE_KEYS.CURRENT_MEAL_COUNT, currentMealCount);
     
     // 2. Čuvamo inpute kalkulatora
     const settings = {
@@ -172,12 +286,12 @@ function saveAppState() {
         goalType: document.getElementById('goalType').value,
         resultVisible: document.getElementById('result').style.display
     };
-    localStorage.setItem('calcSettings', JSON.stringify(settings));
+    localStorage.setItem(LOCAL_STORAGE_KEYS.CALC_SETTINGS, JSON.stringify(settings));
 }
 
 function loadAppState() {
-    // 1. Učitaj podešavanja kalkulatora i POPUNI INPUTE
-    const storedSettings = localStorage.getItem('calcSettings');
+    // 1. Učitaj podešavanja kalkulatora
+    const storedSettings = localStorage.getItem(LOCAL_STORAGE_KEYS.CALC_SETTINGS);
     let shouldRecalculate = false;
 
     if (storedSettings) {
@@ -196,32 +310,27 @@ function loadAppState() {
             }
         } catch (e) {
             console.error("Greška pri učitavanju podešavanja kalkulatora:", e);
-            localStorage.removeItem('calcSettings');
+            localStorage.removeItem(LOCAL_STORAGE_KEYS.CALC_SETTINGS);
         }
     }
 
     // 2. Učitaj obroke
-    const storedMeals = localStorage.getItem('currentMeals');
-    const storedCount = localStorage.getItem('currentMealCount');
+    const storedMeals = localStorage.getItem(LOCAL_STORAGE_KEYS.CURRENT_MEALS);
+    const storedCount = localStorage.getItem(LOCAL_STORAGE_KEYS.CURRENT_MEAL_COUNT);
 
     if (storedMeals && storedCount) {
         try {
             meals = JSON.parse(storedMeals);
-            // FIX #4: parseInt sa radix 10
             currentMealCount = parseInt(storedCount, 10);
-            
-            // Ažuriraj dugmad za broj obroka
-            document.querySelectorAll('.meal-count-btn').forEach(btn => {
-                btn.classList.toggle('active', Number(btn.dataset.count) === currentMealCount);
-            });
+            updateMealCountButtons();
+
         } catch (e) {
             console.error("Greška pri učitavanju obroka:", e);
-            localStorage.removeItem('currentMeals');
-            localStorage.removeItem('currentMealCount');
+            localStorage.removeItem(LOCAL_STORAGE_KEYS.CURRENT_MEALS);
+            localStorage.removeItem(LOCAL_STORAGE_KEYS.CURRENT_MEAL_COUNT);
         }
     }
 
-    // FIX #1: Koristi odvojenu funkciju za rekalkulaciju
     if (shouldRecalculate) {
         recalculateFromSavedState();
     }
@@ -238,30 +347,25 @@ function setMealCount(count) {
     }
 
     currentMealCount = count;
-    meals = [];
-    
-    for (let i = 0; i < count; i++) {
-        meals.push({
-            name: mealNames[count][i],
-            items: []
-        });
-    }
+    meals = mealNames[count].map(name => ({ name, items: [] }));
 
     activeMealIndex = 0;
 
-    const buttons = document.querySelectorAll('.meal-count-btn');
-    buttons.forEach(btn => {
-        btn.classList.toggle('active', Number(btn.dataset.count) === count);
-    });
-
-    saveAppState();
+    updateMealCountButtons();
     renderMeals();
     updateTotals();
+    saveAppState(); // FIX: Sačuvaj novo stanje nakon promene broja obroka
 }
 
 function setActiveMeal(index) {
     activeMealIndex = index;
     renderMeals();
+}
+
+function updateMealCountButtons() {
+    document.querySelectorAll('.meal-count-btn').forEach(btn => {
+        btn.classList.toggle('active', Number(btn.dataset.count) === currentMealCount);
+    });
 }
 
 function clearMeal(mealIndex) {
@@ -286,20 +390,21 @@ function renderMeals() {
         return;
     }
 
+    updateMealCountButtons();
+
     container.innerHTML = meals.map((meal, index) => {
         const isActive = index === activeMealIndex;
         const stats = calculateMealStats(meal);
         
         return `
-            <div class="meal ${isActive ? 'active' : ''}" onclick="setActiveMeal(${index})">
+            <div class="meal ${isActive ? 'active' : ''}" data-meal-index="${index}">
                 <div class="meal-actions-top">
-                    ${isActive ? `<button class="btn-save-meal" onclick="event.stopPropagation(); saveMealPrompt(${index})">💾 Sačuvaj kao Jelo</button>` : ''}
+                    ${isActive ? `<button class="btn-save-meal" data-action="save-as-dish">💾 Sačuvaj kao Jelo</button>` : ''}
                 </div>
-                
                 <div class="meal-header">
                     <div class="meal-title-group">
                         <div class="meal-name">${sanitizeHTML(meal.name)}</div>
-                        <button class="btn-clear-meal" onclick="event.stopPropagation(); clearMeal(${index})" title="Obriši sve iz ovog obroka">🗑️</button>
+                        <button class="btn-clear-meal" data-action="clear-meal" title="Obriši sve iz ovog obroka">🗑️</button>
                     </div>
                     <div class="meal-calories">${stats.calories} kcal</div>
                 </div>
@@ -319,6 +424,52 @@ function renderMeals() {
     }).join('');
 }
 
+function handleMealContainerClick(event) {
+    const mealEl = event.target.closest('.meal');
+    if (!mealEl) return;
+
+    const mealIndex = Number(mealEl.dataset.mealIndex);
+    const actionEl = event.target.closest('[data-action]');
+
+    if (actionEl) {
+        const action = actionEl.dataset.action;
+        
+        // Ignorišemo input akcije na klik da ne bi gubili fokus
+        if (action === 'set-qty' || action === 'set-dish') return;
+
+        event.stopPropagation();
+        switch(action) {
+            case 'save-as-dish': saveMealPrompt(mealIndex); break;
+            case 'clear-meal': clearMeal(mealIndex); break;
+            case 'toggle-dish': toggleDishDetails(mealIndex, Number(actionEl.dataset.itemIndex)); break;
+            case 'adjust-dish': adjustDishServing(mealIndex, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount)); break;
+            case 'adjust-qty': adjustQuantity(mealIndex, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount)); break;
+            case 'remove-item': removeFromMeal(mealIndex, Number(actionEl.dataset.itemIndex)); break;
+        }
+    } else {
+        // Klik na sam obrok da se aktivira
+        setActiveMeal(mealIndex);
+    }
+}
+
+function handleMealContainerChange(event) {
+    const actionEl = event.target.closest('[data-action]');
+    if (!actionEl) return;
+    
+    const mealEl = event.target.closest('.meal');
+    if (!mealEl) return;
+
+    const mealIndex = Number(mealEl.dataset.mealIndex);
+    const action = actionEl.dataset.action;
+    const itemIndex = Number(actionEl.dataset.itemIndex);
+
+    if (action === 'set-qty') {
+        setAmount(mealIndex, itemIndex, actionEl.value);
+    } else if (action === 'set-dish') {
+        setDishServing(mealIndex, itemIndex, actionEl.value);
+    }
+}
+
 function renderMealItem(item, mealIndex, itemIndex) {
     if (item.isDish) {
         return renderDishItem(item, mealIndex, itemIndex);
@@ -333,7 +484,7 @@ function renderDishItem(dish, mealIndex, itemIndex) {
     
     return `
         <div class="meal-food-item dish-item">
-            <div class="dish-header" onclick="event.stopPropagation(); toggleDishDetails(${mealIndex}, ${itemIndex})">
+            <div class="dish-header" data-action="toggle-dish" data-item-index="${itemIndex}">
                 <div class="meal-food-info">
                     <div class="meal-food-name">🍽️ ${sanitizeHTML(dish.name)}</div>
                     <div class="meal-food-macros">
@@ -354,22 +505,22 @@ function renderDishItem(dish, mealIndex, itemIndex) {
                 </div>
             ` : ''}
             <div class="meal-food-controls">
-                <button class="quantity-btn" onclick="event.stopPropagation(); adjustDishServing(${mealIndex}, ${itemIndex}, -10)">−</button>
-                <div class="quantity-input-wrapper" onclick="event.stopPropagation()">
+                <button class="quantity-btn" data-action="adjust-dish" data-item-index="${itemIndex}" data-amount="-10">−</button>
+                <div class="quantity-input-wrapper">
                     <input 
                         type="number" 
                         class="quantity-input" 
                         value="${dish.servingGrams}"
                         min="10"
                         step="10"
-                        onchange="setDishServing(${mealIndex}, ${itemIndex}, this.value)"
-                        onclick="event.stopPropagation()"
+                        data-action="set-dish"
+                        data-item-index="${itemIndex}"
                     >
                     <span class="quantity-unit">g</span>
                 </div>
-                <button class="quantity-btn" onclick="event.stopPropagation(); adjustDishServing(${mealIndex}, ${itemIndex}, 10)">+</button>
+                <button class="quantity-btn" data-action="adjust-dish" data-item-index="${itemIndex}" data-amount="10">+</button>
                 <div class="meal-food-cals">${dishStats.calories} kcal</div>
-                <button class="quantity-btn delete-btn" onclick="event.stopPropagation(); removeFromMeal(${mealIndex}, ${itemIndex})">×</button>
+                <button class="quantity-btn delete-btn" data-action="remove-item" data-item-index="${itemIndex}">×</button>
             </div>
         </div>
     `;
@@ -386,22 +537,22 @@ function renderFoodItem(food, mealIndex, itemIndex) {
                 <div class="meal-food-macros">P: ${macros.protein}g | M: ${macros.fat}g | UH: ${macros.carbs}g</div>
             </div>
             <div class="meal-food-controls">
-                <button class="quantity-btn" onclick="event.stopPropagation(); adjustQuantity(${mealIndex}, ${itemIndex}, -1)">−</button>
-                <div class="quantity-input-wrapper" onclick="event.stopPropagation()">
+                <button class="quantity-btn" data-action="adjust-qty" data-item-index="${itemIndex}" data-amount="-1">−</button>
+                <div class="quantity-input-wrapper">
                     <input 
                         type="number" 
                         class="quantity-input" 
                         value="${food.amount}"
                         min="${food.unit === 'kom' ? 1 : 10}"
                         step="${food.unit === 'kom' ? 1 : 10}"
-                        onchange="setAmount(${mealIndex}, ${itemIndex}, this.value)"
-                        onclick="event.stopPropagation()"
+                        data-action="set-qty"
+                        data-item-index="${itemIndex}"
                     >
                     <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
                 </div>
-                <button class="quantity-btn" onclick="event.stopPropagation(); adjustQuantity(${mealIndex}, ${itemIndex}, 1)">+</button>
+                <button class="quantity-btn" data-action="adjust-qty" data-item-index="${itemIndex}" data-amount="1">+</button>
                 <div class="meal-food-cals">${cals} kcal</div>
-                <button class="quantity-btn delete-btn" onclick="event.stopPropagation(); removeFromMeal(${mealIndex}, ${itemIndex})">×</button>
+                <button class="quantity-btn delete-btn" data-action="remove-item" data-item-index="${itemIndex}">×</button>
             </div>
         </div>
     `;
@@ -420,7 +571,7 @@ function toggleDishDetails(mealIndex, itemIndex) {
 // ========================================
 
 function addFoodToMeal(food) {
-    if (currentlyEditingMealId) {
+    if (document.getElementById('editPanel').style.display === 'flex') {
         addFoodToEdit(food);
         return;
     }
@@ -446,7 +597,7 @@ function addFoodToMeal(food) {
 
     // Resetuj search, ali zadrži renderovanu listu (sve namirnice)
     document.getElementById('searchInput').value = '';
-    renderFoods(); 
+    renderFoods(); // FIX: Osveži listu namirnica da prikaže sve
 }
 
 function addDishToMeal(savedMeal) {
@@ -622,26 +773,19 @@ function saveMealPrompt(mealIndex) {
     if (!name || name.trim() === '') return;
 
     const savedMeal = {
-        id: 'meal-' + Date.now(),
         name: name.trim(),
         foods: foodsOnly.map(f => ({ ...f, isDish: false }))
     };
-
-    savedMeals.push(savedMeal);
-    saveSavedMeals();
-    renderSavedMeals();
+    database.ref('savedMeals').push(savedMeal)
+        .then(() => alert('Jelo sačuvano u zajedničku bazu!'))
+        .catch(err => {
+            console.error("Greška pri čuvanju jela:", err);
+            alert("Došlo je do greške pri čuvanju.");
+        });
 }
 
-function saveSavedMeals() {
-    localStorage.setItem('savedMeals', JSON.stringify(savedMeals));
-}
-
-function loadSavedMeals() {
-    const stored = localStorage.getItem('savedMeals');
-    if (stored) {
-        try { savedMeals = JSON.parse(stored); } catch (e) { savedMeals = []; }
-    }
-}
+// Funkcije saveSavedMeals i loadSavedMeals su uklonjene jer Firebase
+// sada upravlja stanjem preko 'on value' listenera.
 
 function renderSavedMeals() {
     const container = document.getElementById('savedMealsContainer');
@@ -659,7 +803,7 @@ function renderSavedMeals() {
     container.innerHTML = filtered.map((meal, index) => {
         const stats = calculateSavedMealStats(meal);
         return `
-            <div class="saved-meal" data-meal-index="${index}">
+            <div class="saved-meal" data-meal-id="${meal.id}">
                 <div class="saved-meal-header">
                     <div class="saved-meal-name">${sanitizeHTML(meal.name)}</div>
                     <div class="saved-meal-calories">${stats.calories} kcal</div>
@@ -674,22 +818,43 @@ function renderSavedMeals() {
                     ${meal.foods.map(f => `<span class="ingredient-tag">${sanitizeHTML(f.name)} ${f.amount}${sanitizeHTML(f.unit)}</span>`).join('')}
                 </div>
                 <div class="saved-meal-actions">
-                    <button class="btn-small btn-add" data-action="add"><span class="btn-icon">➕</span><span class="btn-text">Dodaj</span></button>
-                    <button class="btn-small btn-edit" data-action="edit"><span class="btn-icon">🛠️</span><span class="btn-text">Edituj</span></button>
-                    <button class="btn-small btn-rename" data-action="rename"><span class="btn-icon">✏️</span><span class="btn-text">Ime</span></button>
-                    <button class="btn-small btn-delete" data-action="delete"><span class="btn-icon">🗑️</span><span class="btn-text">Obriši</span></button>
+                    <button class="btn-small btn-add" data-action="add" aria-label="Dodaj jelo u obrok"><span class="btn-icon">➕</span><span class="btn-text">Dodaj</span></button>
+                    <button class="btn-small btn-edit" data-action="edit" aria-label="Izmeni jelo"><span class="btn-icon">🛠️</span><span class="btn-text">Edituj</span></button>
+                    <button class="btn-small btn-rename" data-action="rename" aria-label="Promeni ime jela"><span class="btn-icon">✏️</span><span class="btn-text">Ime</span></button>
+                    <button class="btn-small btn-delete" data-action="delete" aria-label="Obriši jelo"><span class="btn-icon">🗑️</span><span class="btn-text">Obriši</span></button>
                 </div>
             </div>
         `;
     }).join('');
-    
-    document.querySelectorAll('.saved-meal').forEach((mealEl, index) => {
-        const meal = filtered[index];
-        mealEl.querySelector('[data-action="add"]').onclick = () => addDishToMeal(meal);
-        mealEl.querySelector('[data-action="edit"]').onclick = () => editSavedMeal(meal.id);
-        mealEl.querySelector('[data-action="rename"]').onclick = () => renameSavedMeal(meal.id);
-        mealEl.querySelector('[data-action="delete"]').onclick = () => deleteSavedMeal(meal.id);
-    });
+}
+
+function handleSavedMealAction(event) {
+    const actionButton = event.target.closest('button[data-action]');
+    if (!actionButton) return;
+
+    const savedMealEl = event.target.closest('.saved-meal');
+    if (!savedMealEl) return;
+
+    const mealId = savedMealEl.dataset.mealId;
+    const meal = savedMeals.find(m => m.id === mealId);
+    if (!meal) return;
+
+    const action = actionButton.dataset.action;
+
+    switch (action) {
+        case 'add':
+            addDishToMeal(meal);
+            break;
+        case 'edit':
+            editSavedMeal(meal.id);
+            break;
+        case 'rename':
+            renameSavedMeal(meal.id);
+            break;
+        case 'delete':
+            deleteSavedMeal(meal.id);
+            break;
+    }
 }
 
 function calculateSavedMealStats(savedMeal) {
@@ -708,9 +873,7 @@ function renameSavedMeal(mealId) {
     if (!meal) return;
     const newName = prompt('Novo ime jela:', meal.name);
     if (newName && newName.trim() !== '') {
-        meal.name = newName.trim();
-        saveSavedMeals();
-        renderSavedMeals();
+        database.ref(`savedMeals/${mealId}/name`).set(newName.trim());
     }
 }
 
@@ -731,10 +894,8 @@ function editSavedMeal(mealId) {
 }
 
 function deleteSavedMeal(mealId) {
-    if (!confirm('Obriši jelo zauvek?')) return;
-    savedMeals = savedMeals.filter(m => m.id !== mealId);
-    saveSavedMeals();
-    renderSavedMeals();
+    if (!confirm('Da li ste sigurni da želite da obrišete ovo jelo iz zajedničke baze?')) return;
+    database.ref(`savedMeals/${mealId}`).remove();
 }
 
 // ========================================
@@ -752,37 +913,31 @@ function renderEditFoodsList() {
         const cals = calculateCalories(food);
         const macros = calculateMacros(food);
         return `
-            <div class="edit-food-item">
-                <div class="edit-food-info">
-                    <div class="edit-food-name">${sanitizeHTML(food.name)}</div>
-                    <div class="edit-food-macros">${food.amount}${sanitizeHTML(food.unit)} • ${cals} kcal • P:${macros.protein} M:${macros.fat} UH:${macros.carbs}</div>
-                </div>
-                <div class="edit-food-controls">
-                    <button class="quantity-btn" onclick="adjustEditQuantity(${index}, -1)">−</button>
-                    <div class="quantity-input-wrapper">
-                        <input type="number" class="quantity-input" value="${food.amount}" min="${food.unit==='kom'?1:10}" step="${food.unit==='kom'?1:10}" onchange="setEditAmount(${index}, this.value)">
-                        <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
-                    </div>
-                    <button class="quantity-btn" onclick="adjustEditQuantity(${index}, 1)">+</button>
-                    <button class="quantity-btn delete-btn" onclick="removeFromEdit(${index})">×</button>
-                </div>
+            <div class="edit-food-item" data-item-index="${index}">
+                 <div class="edit-food-info">
+                     <div class="edit-food-name">${sanitizeHTML(food.name)}</div>
+                     <div class="edit-food-macros">${food.amount}${sanitizeHTML(food.unit)} • ${cals} kcal • P:${macros.protein} M:${macros.fat} UH:${macros.carbs}</div>
+                 </div>
+                 <div class="edit-food-controls">
+                     <button class="quantity-btn" data-action="adjust-edit-qty" data-amount="-1">−</button>
+                     <div class="quantity-input-wrapper">
+                         <input type="number" class="quantity-input" value="${food.amount}" min="${food.unit==='kom'?1:10}" step="${food.unit==='kom'?1:10}" data-action="set-edit-qty">
+                         <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
+                     </div>
+                     <button class="quantity-btn" data-action="adjust-edit-qty" data-amount="1">+</button>
+                     <button class="quantity-btn delete-btn" data-action="remove-from-edit">×</button>
+                 </div>
             </div>`;
     }).join('');
 }
 
-// FIX: Prikaz svih namirnica u edit modu (bez limita)
 function renderEditFoods() {
     const searchTerm = document.getElementById('editSearchInput').value.toLowerCase();
-    const foodList = document.getElementById('editFoodList');
-    
-    let displayFoods = [];
-    
-    // Ako nema pretrage, prikaži SVE (ili prvih par stotina ako baza postane ogromna)
-    if (searchTerm.length === 0) {
-        displayFoods = foods; 
-    } else {
-        displayFoods = foods.filter(food => food.name.toLowerCase().includes(searchTerm));
-    }
+    const foodList = document.getElementById('editPanelFoodSearchList');
+
+    const displayFoods = searchTerm.length === 0
+        ? foods // Prikazujemo sve namirnice iz Firebase-a
+        : foods.filter(food => food.name.toLowerCase().includes(searchTerm));
 
     if (displayFoods.length === 0) {
         foodList.innerHTML = '<div class="empty-state">Nema rezultata</div>';
@@ -790,11 +945,15 @@ function renderEditFoods() {
     }
 
     foodList.innerHTML = displayFoods.map((food, index) => {
-        const originalIndex = foods.indexOf(food);
         return `
-        <div class="food-item" onclick="addFoodToEdit(foods[${originalIndex}])">
-            <span class="food-name">${sanitizeHTML(food.name)}</span>
-            <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
+        <div class="food-item" data-food-id="${food.id}">
+            <div class="food-item-info">
+                <span class="food-name">${sanitizeHTML(food.name)}</span>
+                <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
+            </div>
+            <div class="food-item-actions">
+                 <button class="btn-icon-small btn-add-food" data-action="add">➕</button>
+            </div>
         </div>
     `}).join('');
 }
@@ -803,9 +962,6 @@ function addFoodToEdit(food) {
     const foodItem = { isDish: false, ...food, amount: food.serving, baseCalories: food.calories, baseServing: food.serving };
     editWorkspaceItems.push(foodItem);
     renderEditFoodsList();
-    // Ne čistimo input da bi korisnik mogao da doda više istih stvari ako želi, ili očistiti ako želiš
-    // document.getElementById('editSearchInput').value = '';
-    // renderEditFoods();
 }
 
 function adjustEditQuantity(index, dir) {
@@ -826,15 +982,61 @@ function removeFromEdit(index) {
     renderEditFoodsList();
 }
 
+function handleEditWorkspaceClick(event) {
+    const actionEl = event.target.closest('[data-action]');
+    if (!actionEl) return;
+
+    const itemEl = event.target.closest('.edit-food-item');
+    const itemIndex = Number(itemEl.dataset.itemIndex);
+    const action = actionEl.dataset.action;
+
+    // Ignorišemo input akcije na klik
+    if (action === 'set-edit-qty') return;
+
+    switch(action) {
+        case 'adjust-edit-qty':
+            adjustEditQuantity(itemIndex, Number(actionEl.dataset.amount));
+            break;
+        case 'remove-from-edit':
+            removeFromEdit(itemIndex);
+            break;
+    }
+}
+
+function handleEditWorkspaceChange(event) {
+    const actionEl = event.target.closest('[data-action]');
+    if (!actionEl) return;
+
+    const itemEl = event.target.closest('.edit-food-item');
+    const itemIndex = Number(itemEl.dataset.itemIndex);
+    const action = actionEl.dataset.action;
+
+    if (action === 'set-edit-qty') {
+        setEditAmount(itemIndex, actionEl.value);
+    }
+}
+
+function handleEditPanelSearchListClick(event) {
+    const addBtn = event.target.closest('[data-action="add"]');
+    if (!addBtn) return;
+    const foodItemEl = addBtn.closest('.food-item');
+    const foodId = foodItemEl.dataset.foodId;
+    const food = foods.find(f => f.id === foodId);
+    if (food) addFoodToEdit(food);
+}
+
 function saveEditedMeal() {
     if (!currentlyEditingMealId) return;
     const meal = savedMeals.find(m => m.id === currentlyEditingMealId);
+    if (!meal) { closeEditPanel(); return; }
     if (editWorkspaceItems.length === 0) { alert('Jelo ne može biti prazno!'); return; }
     
-    meal.foods = editWorkspaceItems.map(f => ({ ...f, isDish: false }));
-    saveSavedMeals();
-    renderSavedMeals();
-    closeEditPanel();
+    const updatedData = {
+        name: meal.name,
+        foods: editWorkspaceItems.map(f => ({ ...f, isDish: false }))
+    };
+    database.ref(`savedMeals/${currentlyEditingMealId}`).set(updatedData)
+        .then(() => closeEditPanel());
 }
 
 function cancelEditMode() {
@@ -850,70 +1052,19 @@ function closeEditPanel() {
     document.body.style.overflow = '';
 }
 
-function handleEditPanelBackdrop(e) { if(e.target.id === 'editPanel') cancelEditMode(); }
-
-// ========================================
-// IMPORT / EXPORT
-// ========================================
-
-function exportMeals() {
-    if (savedMeals.length === 0) { alert('Nema jela za export!'); return; }
-    const dataBlob = new Blob([JSON.stringify(savedMeals, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `plan_ishrane_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-}
-
-// FIX #2: Memory leak - čišćenje input elementa nakon upotrebe
-function importMeals() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) {
-            input.remove(); // Očisti element ako nema fajla
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const imported = JSON.parse(event.target.result);
-                if (!Array.isArray(imported)) throw new Error("Format nije niz");
-                const isValid = imported.every(m => m && m.name && Array.isArray(m.foods));
-                if (!isValid) throw new Error("Neispravna struktura jela");
-
-                if (confirm('Klikni OK da ZAMENIŠ jela, Cancel da DODAŠ.')) {
-                    savedMeals = imported;
-                } else {
-                    savedMeals = [...savedMeals, ...imported];
-                }
-                saveSavedMeals();
-                renderSavedMeals();
-                alert('Uspešno!');
-            } catch (err) {
-                alert('Greška: Fajl je oštećen ili neispravan format.');
-            } finally {
-                input.remove(); // FIX: Uvek očisti input element
-            }
-        };
-        reader.onerror = () => {
-            alert('Greška pri čitanju fajla.');
-            input.remove(); // FIX: Očisti i na grešku
-        };
-        reader.readAsText(file);
-    };
-    
-    // FIX: Očisti ako korisnik otkaže dijalog
-    input.addEventListener('cancel', () => {
-        input.remove();
-    });
-    
-    input.click();
+function handleEditPanelClick(event) {
+    const target = event.target;
+    // Zatvori ako se klikne na pozadinu
+    if (target.id === 'editPanel') {
+        cancelEditMode();
+        return;
+    }
+    // Zatvori ako se klikne na dugme za zatvaranje/cancel
+    if (target.closest('[data-action="cancel-edit"]')) {
+        cancelEditMode();
+    } else if (target.closest('[data-action="save-edit"]')) {
+        saveEditedMeal();
+    }
 }
 
 // ========================================
@@ -935,8 +1086,8 @@ function updateTotals() {
     
     // Procenti
     if (tCal > 0) {
-        const pC = tPro*4, fC = tFat*9, cC = tCarb*4;
-        const total = pC+fC+cC;
+        const pC = tPro * CALORIES_PER_GRAM.PROTEIN, fC = tFat * CALORIES_PER_GRAM.FAT, cC = tCarb * CALORIES_PER_GRAM.CARBS;
+        const total = pC + fC + cC;
         if(total>0) {
             const pp = Math.round((pC/total)*100);
             const fp = Math.round((fC/total)*100);
@@ -953,7 +1104,7 @@ function updateTotals() {
         const rem = dailyGoal - tCal;
         const el = document.getElementById('remaining');
         el.textContent = rem >= 0 ? `${Math.round(rem)} kcal` : `Prekoračenje: ${Math.abs(Math.round(rem))} kcal`;
-        el.style.color = rem < 0 ? '#f87171' : 'white'; // Jača crvena boja za bolju vidljivost
+        el.style.color = rem < 0 ? 'var(--danger-red)' : 'white';
 
         // Ažuriranje kružnog grafikona
         const percent = Math.min(Math.round((tCal / dailyGoal) * 100), 100);
@@ -962,50 +1113,142 @@ function updateTotals() {
 
         // Ako je prekoračeno, oboji ceo krug u crveno
         if (tCal > dailyGoal) {
-            progressCircle.style.background = 'conic-gradient(#f87171 100%, #f87171 0)';
+            progressCircle.style.background = 'conic-gradient(var(--danger-red) 100%, var(--danger-red) 0)';
         } else {
             // Vrati normalnu boju ako nije prekoračeno
-            progressCircle.style.background = `conic-gradient(#4ade80 var(--progress-percent, 0%), rgba(255, 255, 255, 0.2) 0)`;
+            progressCircle.style.background = `conic-gradient(var(--accent-green) var(--progress-percent, 0%), rgba(255, 255, 255, 0.2) 0)`;
         }
     } else {
         document.getElementById('remaining').textContent = '-';
         progressCircle.style.setProperty('--progress-percent', '0%');
         progressCircle.setAttribute('aria-valuenow', 0);
+        progressCircle.style.background = '';
     }
 }
 
 // ========================================
-// LISTA NAMIRNICA (RENDER FIX)
+// LISTA NAMIRNICA
 // ========================================
 
 function renderFoods() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const foodList = document.getElementById('foodList');
-    
-    let displayList = [];
-    
-    // FIX: Nema više limita od 50
-    if (searchTerm.length === 0) {
-        displayList = foods; // Prikazujemo SVE
-    } else {
-        displayList = foods.filter(food => food.name.toLowerCase().includes(searchTerm));
-    }
+
+    // Ako je pretraga prazna, prikaži sve. U suprotnom, filtriraj.
+    const displayList = searchTerm.length === 0
+        ? foods
+        : foods.filter(food => food.name.toLowerCase().includes(searchTerm));
 
     if (displayList.length === 0) {
-        foodList.innerHTML = '<div class="empty-state">Nema rezultata</div>';
+        foodList.innerHTML = `<div class="empty-state">Nema rezultata za unetu pretragu.</div>`;
         return;
     }
 
     foodList.innerHTML = displayList.map((food, index) => {
-        const originalIndex = foods.indexOf(food);
         return `
-        <div class="food-item" onclick="addFoodToMeal(foods[${originalIndex}])">
-            <span class="food-name">${sanitizeHTML(food.name)}</span>
-            <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
+        <div class="food-item" data-food-id="${food.id}">
+            <div class="food-item-info">
+                <span class="food-name">${sanitizeHTML(food.name)}</span>
+                <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
+            </div>
+            <div class="food-item-actions">
+                <button class="btn-icon-small" data-action="edit" title="Izmeni namirnicu">✏️</button>
+                <button class="btn-icon-small" data-action="delete" title="Obriši namirnicu">🗑️</button>
+                <button class="btn-icon-small btn-add-food" data-action="add" title="Dodaj u obrok">➕</button>
+            </div>
         </div>
     `}).join('');
 }
 
-function searchSavedMeals() { renderSavedMeals(); }
+function handleFoodListAction(event) {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
 
-window.onload = init;
+    const foodItemEl = button.closest('.food-item');
+    const foodId = foodItemEl.dataset.foodId;
+    const food = foods.find(f => f.id === foodId);
+    if (!food) return;
+
+    const action = button.dataset.action;
+    if (action === 'add') {
+        addFoodToMeal(food);
+    } else if (action === 'edit') {
+        openFoodForm(foodId);
+    } else if (action === 'delete') {
+        if (confirm(`Da li ste sigurni da želite da obrišete "${food.name}" iz baze?`)) {
+            database.ref(`foods/${foodId}`).remove();
+        }
+    }
+}
+
+// ========================================
+// UPRAVLJANJE NAMIRNICAMA (NOVO)
+// ========================================
+
+function openFoodForm(foodId = null) {
+    const modal = document.getElementById('foodFormModal');
+    const form = document.getElementById('foodForm');
+    form.reset();
+
+    if (foodId) {
+        // Edit mode
+        const food = foods.find(f => f.id === foodId);
+        if (!food) return;
+        document.getElementById('foodFormTitle').textContent = 'Izmeni Namirnicu';
+        document.getElementById('foodId').value = food.id;
+        document.getElementById('foodName').value = food.name;
+        document.getElementById('foodCalories').value = food.calories;
+        document.getElementById('foodProtein').value = food.protein;
+        document.getElementById('foodFat').value = food.fat;
+        document.getElementById('foodCarbs').value = food.carbs;
+        document.getElementById('foodServing').value = food.serving;
+        document.getElementById('foodUnit').value = food.unit;
+    } else {
+        // Add mode
+        document.getElementById('foodFormTitle').textContent = 'Dodaj Novu Namirnicu';
+        document.getElementById('foodId').value = '';
+    }
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeFoodForm() {
+    document.getElementById('foodFormModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function saveFood(event) {
+    event.preventDefault();
+    const foodId = document.getElementById('foodId').value;
+    const foodData = {
+        name: document.getElementById('foodName').value,
+        calories: parseFloat(document.getElementById('foodCalories').value),
+        protein: parseFloat(document.getElementById('foodProtein').value),
+        fat: parseFloat(document.getElementById('foodFat').value),
+        carbs: parseFloat(document.getElementById('foodCarbs').value),
+        serving: parseFloat(document.getElementById('foodServing').value),
+        unit: document.getElementById('foodUnit').value,
+    };
+
+    // Validacija
+    if (foodData.calories < 0 || foodData.protein < 0 || foodData.fat < 0 || foodData.carbs < 0 || foodData.serving <= 0) {
+        alert("Vrednosti za kalorije, makronutrijente i porciju ne mogu biti negativne, a porcija mora biti veća od 0.");
+        return;
+    }
+
+    if (foodId) {
+        // Update
+        database.ref(`foods/${foodId}`).update(foodData).then(closeFoodForm);
+    } else {
+        // Create
+        database.ref('foods').push(foodData).then(closeFoodForm);
+    }
+}
+
+function handleFoodFormModalClick(event) {
+    if (event.target.id === 'foodFormModal' || event.target.closest('[data-action="close-food-form"]')) {
+        closeFoodForm();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', setupAuth);

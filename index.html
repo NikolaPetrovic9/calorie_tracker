@@ -7,12 +7,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>Kalkulator Kalorija i Planiranje Obroka</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" defer></script>
     <link rel="stylesheet" href="style.css" />
+    <script src="script.js" defer></script>
 </head>
 
 <body>
-    <div class="container">
-        <h1>🥗 Kalkulator Kalorija</h1>
+    <div id="appContainer" class="container" style="display: none;">
+        <div class="main-header">
+            <h1>🥗 Kalkulator Kalorija</h1>
+            <button id="logoutBtn" class="btn-logout">Odjavi se</button>
+        </div>
 
         <div class="card">
             <h2>Izračunaj Dnevni Cilj</h2>
@@ -63,7 +71,7 @@
                 </select>
             </div>
             
-            <button class="btn" onclick="calculate(event)">Izračunaj Cilj</button>
+            <button class="btn" id="calculateBtn">Izračunaj Cilj</button>
             <div id="result" style="display: none" class="result">
                 <h3>Tvoj Dnevni Cilj</h3>
                 <div class="calories">
@@ -82,13 +90,13 @@
         <div class="card">
             <h2>Broj Obroka</h2>
             <div class="meal-count-selector">
-                <button class="meal-count-btn active" data-count="3" onclick="setMealCount(3)">
+                <button class="meal-count-btn active" data-count="3">
                     3 obroka
                 </button>
-                <button class="meal-count-btn" data-count="4" onclick="setMealCount(4)">
+                <button class="meal-count-btn" data-count="4">
                     4 obroka
                 </button>
-                <button class="meal-count-btn" data-count="5" onclick="setMealCount(5)">
+                <button class="meal-count-btn" data-count="5">
                     5 obroka
                 </button>
             </div>
@@ -107,28 +115,23 @@
                     type="text" 
                     id="savedMealsSearch" 
                     class="search-input" 
-                    placeholder="Pretraži sačuvana jela..." 
+                    placeholder="Pretraži zajednička jela..." 
                     autocomplete="off"
-                    oninput="searchSavedMeals()"
                 />
-                <div class="export-import-buttons">
-                    <button class="btn-export" onclick="exportMeals()">📤 Export</button>
-                    <button class="btn-import" onclick="importMeals()">📥 Import</button>
-                </div>
             </div>
             <div id="savedMealsContainer" class="saved-meals-container"></div>
         </div>
 
         <div class="card">
             <h2>Dodaj Namirnicu</h2>
+            <button id="addNewFoodBtn" class="btn btn-add-new-food">➕ Dodaj novu namirnicu u bazu</button>
             <div class="search-box">
                 <label for="searchInput" class="visually-hidden">Pretraži namirnice</label>
                 <input 
                     type="text" 
                     id="searchInput" 
                     placeholder="Pretraži namirnice..." 
-                    autocomplete="off"
-                    oninput="renderFoods()" 
+                    autocomplete="off" 
                 />
             </div>
             <div id="foodList" class="food-list"></div>
@@ -166,13 +169,12 @@
         </div>
     </div>
 
-    <div id="editPanel" class="edit-panel" style="display: none;" onclick="handleEditPanelBackdrop(event)">
-        <div class="edit-panel-content" onclick="event.stopPropagation()">
+    <div id="editPanel" class="edit-panel" style="display: none;">
+        <div class="edit-panel-content">
             <div class="edit-panel-header">
                 <h2>✏️ Editovanje Jela: <span id="editMealName"></span></h2>
-                <button class="btn-close-edit" onclick="cancelEditMode()" aria-label="Zatvori panel">✕</button>
+                <button class="btn-close-edit" data-action="cancel-edit" aria-label="Zatvori panel">✕</button>
             </div>
-            
             <div class="edit-panel-body">
                 <div class="edit-instructions">
                     💡 Izmeni namirnice ispod, pa klikni "Sačuvaj Izmene" ili "Otkaži"
@@ -188,23 +190,67 @@
                             type="text" 
                             id="editSearchInput" 
                             placeholder="Pretraži namirnice..." 
-                            autocomplete="off"
-                            oninput="renderEditFoods()" 
+                            autocomplete="off" 
                         />
                     </div>
-                    <div id="editFoodList" class="food-list" style="max-height: 250px;"></div>
+                    <div id="editPanelFoodSearchList" class="food-list" style="max-height: 250px;"></div>
                 </div>
             </div>
-            
             <div class="edit-panel-footer">
-                <button class="btn btn-cancel" onclick="cancelEditMode()">❌ Otkaži</button>
-                <button class="btn btn-save-edit" onclick="saveEditedMeal()">✅ Sačuvaj Izmene</button>
+                <button class="btn btn-cancel" data-action="cancel-edit">❌ Otkaži</button>
+                <button class="btn btn-save-edit" data-action="save-edit">✅ Sačuvaj Izmene</button>
             </div>
         </div>
     </div>
 
-    <script src="foods.js"></script>
-    <script src="script.js"></script>
+    <div id="foodFormModal" class="edit-panel" style="display: none;">
+        <div class="edit-panel-content">
+            <div class="edit-panel-header">
+                <h2 id="foodFormTitle">Dodaj Novu Namirnicu</h2>
+                <button class="btn-close-edit" data-action="close-food-form" aria-label="Zatvori panel">✕</button>
+            </div>
+            <div class="edit-panel-body">
+                <form id="foodForm">
+                    <input type="hidden" id="foodId">
+                    <div class="input-group"><label for="foodName">Naziv</label><input type="text" id="foodName" required></div>
+                    <div class="input-group"><label for="foodCalories">Kalorije</label><input type="number" id="foodCalories" min="0" required></div>
+                    <div class="input-group"><label for="foodProtein">Proteini</label><input type="number" step="0.1" id="foodProtein" min="0" required></div>
+                    <div class="input-group"><label for="foodFat">Masti</label><input type="number" step="0.1" id="foodFat" min="0" required></div>
+                    <div class="input-group"><label for="foodCarbs">Ugljeni hidrati</label><input type="number" step="0.1" id="foodCarbs" min="0" required></div>
+                    <div class="input-group"><label for="foodServing">Standardna porcija</label><input type="number" id="foodServing" value="100" min="1" required></div>
+                    <div class="input-group">
+                        <label for="foodUnit">Jedinica</label>
+                        <select id="foodUnit">
+                            <option value="g">g</option>
+                            <option value="ml">ml</option>
+                            <option value="kom">kom</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="edit-panel-footer">
+                <button class="btn btn-cancel" data-action="close-food-form">❌ Otkaži</button>
+                <button id="saveFoodBtn" class="btn btn-save-edit">✅ Sačuvaj Namirnicu</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loginOverlay" class="login-overlay" style="display: none;">
+        <div class="card login-card">
+            <h2>Dobrodošli!</h2>
+            <p class="login-info">Prijavite se sa svojim Google nalogom da biste nastavili.</p>
+            <button id="googleSignInBtn" class="btn btn-google">
+                <svg aria-hidden="true" class="google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path><path d="M1 1h22v22H1z" fill="none"></path></svg>
+                <span>Prijavi se sa Google</span>
+            </button>
+            <p id="loginError" class="login-error"></p>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p class="loading-text">Učitavanje podataka...</p>
+    </div>
 </body>
 
 </html>
