@@ -69,8 +69,17 @@ function sanitizeHTML(str) {
 // ========================================
 
 function initApp() {
-    loadAppState();   // Učitaj lokalno stanje (inpute, trenutne obroke)
-    initFirebaseListeners(); // Pokreni slušanje za promene na Firebase
+    loadAppState(); // Učitaj lokalno stanje (inpute, trenutne obroke)
+    try {
+        initFirebaseListeners(); // Pokreni slušanje za promene na Firebase
+    } catch (error) {
+        console.error("KRITIČNA GREŠKA pri inicijalizaciji Firebase listenera:", error);
+        alert(
+            "Došlo je do kritične greške pri povezivanju sa bazom. Proverite da li je 'databaseURL' ispravan. Pogledajte konzolu za detalje."
+        );
+        auth.signOut();
+        return;
+    }
     addEventListeners(); // Poveži sve dogadjaje (klikove, unose...)
     
     // Ako nema sačuvanog stanja obroka, inicijalizuj prazno
