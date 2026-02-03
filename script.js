@@ -139,7 +139,8 @@ function initFirebaseListeners() {
     };
 
     // Slušaj za promene na listi namirnica
-    database.ref('foods').on('value', (snapshot) => {
+    database.ref('foods').on('value', 
+    (snapshot) => {
         const data = snapshot.val();
         foods = []; // Isprazni lokalnu listu
         if (data) {
@@ -158,10 +159,16 @@ function initFirebaseListeners() {
             initialFoodsLoaded = true;
             hideLoaderIfNeeded();
         }
+    }, 
+    (error) => {
+        console.error("Firebase greška pri čitanju 'foods':", error);
+        alert("Došlo je do greške pri učitavanju podataka o namirnicama. Proverite konzolu za detalje. Najverovatnije problem sa 'Security Rules'.");
+        auth.signOut(); // Vrati korisnika na login ekran ako podaci ne mogu da se pročitaju
     });
 
     // Slušaj za promene na sačuvanim jelima
-    database.ref('savedMeals').on('value', (snapshot) => {
+    database.ref('savedMeals').on('value', 
+    (snapshot) => {
         const data = snapshot.val();
         savedMeals = []; // Isprazni lokalnu listu
         if (data) {
@@ -173,6 +180,11 @@ function initFirebaseListeners() {
             initialSavedMealsLoaded = true;
             hideLoaderIfNeeded();
         }
+    },
+    (error) => {
+        console.error("Firebase greška pri čitanju 'savedMeals':", error);
+        alert("Došlo je do greške pri učitavanju sačuvanih jela. Proverite konzolu za detalje. Najverovatnije problem sa 'Security Rules'.");
+        auth.signOut(); // Vrati korisnika na login ekran ako podaci ne mogu da se pročitaju
     });
 }
 
