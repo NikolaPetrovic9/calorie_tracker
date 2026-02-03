@@ -100,7 +100,7 @@ function setupAuth() {
     const emailInput = document.getElementById('emailInput');
     const passwordInput = document.getElementById('passwordInput');
     const signInBtn = document.getElementById('signInBtn');
-    const registerBtn = document.getElementById('registerBtn');
+    const showPasswordCheckbox = document.getElementById('showPasswordCheckbox');
     const loginError = document.getElementById('loginError');
 
     const handleAuthError = (error) => {
@@ -111,12 +111,6 @@ function setupAuth() {
                 break;
             case 'auth/wrong-password':
                 loginError.textContent = 'Pogrešna šifra. Pokušajte ponovo.';
-                break;
-            case 'auth/email-already-in-use':
-                loginError.textContent = 'Email adresa je već registrovana.';
-                break;
-            case 'auth/weak-password':
-                loginError.textContent = 'Šifra mora imati najmanje 6 karaktera.';
                 break;
             case 'auth/invalid-email':
                 loginError.textContent = 'Unesite ispravnu email adresu.';
@@ -167,22 +161,12 @@ function setupAuth() {
             .catch(handleAuthError);
     });
 
-    registerBtn.addEventListener('click', () => {
-        const email = emailInput.value;
-        const password = passwordInput.value;
-        loginError.textContent = '';
-
-        if (!email || !password) {
-            loginError.textContent = 'Molimo unesite email i šifru.';
-            return;
-        }
-
-        auth.createUserWithEmailAndPassword(email, password)
-            .catch(handleAuthError);
-    });
-
     logoutBtn.addEventListener('click', () => {
         auth.signOut();
+    });
+
+    showPasswordCheckbox.addEventListener('change', () => {
+        passwordInput.type = showPasswordCheckbox.checked ? 'text' : 'password';
     });
 }
 
