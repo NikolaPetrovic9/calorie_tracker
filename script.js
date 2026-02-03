@@ -20,16 +20,9 @@ const LOCAL_STORAGE_KEYS = {
 // ========================================
 // FIREBASE PODEŠAVANJA
 // ========================================
-// NALEPI OVDE SVOJ firebaseConfig OBJEKAT KOJI SI DOBIO U KORAKU 1
-const firebaseConfig = {
-    apiKey: "AIzaSyC7Lgquk2mvgxqOwS0G0MXMJiD4jzOKbTk",
-    authDomain: "colorie-calculator.firebaseapp.com",
-    databaseURL: "https://colorie-calculator-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "colorie-calculator",
-    storageBucket: "colorie-calculator.firebasestorage.app",
-    messagingSenderId: "113528951260",
-    appId: "1:113528951260:web:2b7cde7a5a8b9509a07f19"
-};
+// Firebase konfiguracija se učitava iz `firebase-config.js` fajla,
+// koji se mora uključiti u HTML pre ovog skripta.
+// Taj fajl NE SME biti na javnom repozitorijumu.
 
 // Inicijalizacija Firebase-a
 firebase.initializeApp(firebaseConfig);

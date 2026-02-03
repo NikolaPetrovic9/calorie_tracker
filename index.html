@@ -7,12 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <title>Kalkulator Kalorija i Planiranje Obroka</title>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" defer></script>
     <link rel="stylesheet" href="style.css" />
-    <script src="script.js" defer></script>
 </head>
 
 <body>
@@ -251,6 +246,17 @@
         <div class="spinner"></div>
         <p class="loading-text">Učitavanje podataka...</p>
     </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <!-- Aplikacioni skriptovi -->
+    <!-- Prvo učitaj konfiguraciju (koja nije na Gitu) -->
+    <script src="firebase-config.js"></script>
+    <!-- Zatim glavni skript koji koristi tu konfiguraciju -->
+    <script src="script.js"></script>
 </body>
 
 </html>
