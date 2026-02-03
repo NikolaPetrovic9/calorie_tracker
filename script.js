@@ -998,30 +998,11 @@ function renderEditFoodsList() {
 }
 
 function renderEditFoods() {
-    const searchTerm = document.getElementById('editSearchInput').value.toLowerCase();
-    const foodList = document.getElementById('editPanelFoodSearchList');
-
-    const displayFoods = searchTerm.length === 0
-        ? foods // Prikazujemo sve namirnice iz Firebase-a
-        : foods.filter(food => food.name.toLowerCase().includes(searchTerm));
-
-    if (displayFoods.length === 0) {
-        foodList.innerHTML = '<div class="empty-state">Nema rezultata</div>';
-        return;
-    }
-
-    foodList.innerHTML = displayFoods.map((food, index) => {
-        return `
-        <div class="food-item" data-food-id="${food.id}">
-            <div class="food-item-info">
-                <span class="food-name">${sanitizeHTML(food.name)}</span>
-                <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
-            </div>
-            <div class="food-item-actions">
-                 <button class="btn-icon-small btn-add-food" data-action="add">➕</button>
-            </div>
-        </div>
-    `}).join('');
+    renderFoodSearchList(
+        document.getElementById('editSearchInput'), 
+        document.getElementById('editPanelFoodSearchList'), 
+        () => `<button class="btn-icon-small btn-add-food" data-action="add" title="Dodaj u jelo">➕</button>`
+    );
 }
 
 function addFoodToEdit(food) {
@@ -1196,6 +1177,34 @@ function updateTotals() {
 // LISTA NAMIRNICA
 // ========================================
 
+/**
+ * Generička funkcija za renderovanje liste namirnica sa pretragom.
+ * @param {HTMLInputElement} searchInputEl - Input element za pretragu.
+ * @param {HTMLElement} containerEl - Kontejner u koji se renderuje lista.
+ * @param {Function} actionsTemplateFn - Funkcija koja vraća HTML string za akcione dugmiće.
+ */
+function renderFoodSearchList(searchInputEl, containerEl, actionsTemplateFn) {
+    const searchTerm = searchInputEl.value.toLowerCase();
+    
+    const displayList = searchTerm.length === 0
+        ? foods
+        : foods.filter(food => food.name.toLowerCase().includes(searchTerm));
+
+    if (displayList.length === 0) {
+        containerEl.innerHTML = `<div class="empty-state">Nema rezultata.</div>`;
+        return;
+    }
+
+    containerEl.innerHTML = displayList.map(food => `
+        <div class="food-item" data-food-id="${food.id}">
+            <div class="food-item-info">
+                <span class="food-name">${sanitizeHTML(food.name)}</span>
+                <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
+            </div>
+            <div class="food-item-actions">${actionsTemplateFn(food)}</div>
+        </div>`).join('');
+}
+
 function renderFoods() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const foodList = document.getElementById('foodList');
@@ -1206,24 +1215,15 @@ function renderFoods() {
         : foods.filter(food => food.name.toLowerCase().includes(searchTerm));
 
     if (displayList.length === 0) {
-        foodList.innerHTML = `<div class="empty-state">Nema rezultata za unetu pretragu.</div>`;
+        foodList.innerHTML = `<div class="empty-state">Nema rezultata.</div>`;
         return;
     }
 
-    foodList.innerHTML = displayList.map((food, index) => {
-        return `
-        <div class="food-item" data-food-id="${food.id}">
-            <div class="food-item-info">
-                <span class="food-name">${sanitizeHTML(food.name)}</span>
-                <span class="food-calories">${food.calories} kcal / ${food.serving}${sanitizeHTML(food.unit)}</span>
-            </div>
-            <div class="food-item-actions">
-                <button class="btn-icon-small" data-action="edit" title="Izmeni namirnicu">✏️</button>
-                <button class="btn-icon-small" data-action="delete" title="Obriši namirnicu">🗑️</button>
-                <button class="btn-icon-small btn-add-food" data-action="add" title="Dodaj u obrok">➕</button>
-            </div>
-        </div>
-    `}).join('');
+    renderFoodSearchList(document.getElementById('searchInput'), document.getElementById('foodList'), () => `
+        <button class="btn-icon-small" data-action="edit" title="Izmeni namirnicu">✏️</button>
+        <button class="btn-icon-small" data-action="delete" title="Obriši namirnicu">🗑️</button>
+        <button class="btn-icon-small btn-add-food" data-action="add" title="Dodaj u obrok">➕</button>
+    `);
 }
 
 function handleFoodListAction(event) {
