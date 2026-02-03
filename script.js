@@ -115,7 +115,9 @@ function setupAuth() {
     googleSignInBtn.addEventListener('click', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         loginError.textContent = '';
-        auth.signInWithPopup(provider)
+        // Korišćenje signInWithRedirect umesto signInWithPopup za bolju kompatibilnost sa mobilnim uređajima.
+        // Pretraživač će se preusmeriti na Google, a nakon prijave vratiti na aplikaciju.
+        auth.signInWithRedirect(provider)
             .catch(error => {
                 console.error("Greška pri Google prijavi:", error);
                 loginError.textContent = 'Došlo je do greške prilikom prijave.';
@@ -207,6 +209,13 @@ function addEventListeners() {
 // KALKULATOR CILJEVA
 // ========================================
 
+function areCalcInputsValid() {
+    const weight = document.getElementById('weight').value;
+    const height = document.getElementById('height').value;
+    const age = document.getElementById('age').value;
+    return weight && height && age;
+}
+
 function updateGoalCalculationUI() {
     const gender = document.getElementById('gender').value;
     const weight = parseFloat(document.getElementById('weight').value);
@@ -215,7 +224,7 @@ function updateGoalCalculationUI() {
     const activity = parseFloat(document.getElementById('activity').value);
     const goalPercentage = parseFloat(document.getElementById('goalType').value);
 
-    if (!weight || !height || !age) return;
+    if (!areCalcInputsValid()) return;
 
     let bmr;
     if (gender === 'female') {
@@ -246,13 +255,13 @@ function updateGoalCalculationUI() {
 }
 
 function recalculateFromSavedState() {
-    if (!document.getElementById('weight').value || !document.getElementById('height').value || !document.getElementById('age').value) return;
+    if (!areCalcInputsValid()) return;
     updateGoalCalculationUI();
 }
 
 function calculate(event) {
     event.preventDefault();
-    if (!document.getElementById('weight').value || !document.getElementById('height').value || !document.getElementById('age').value) {
+    if (!areCalcInputsValid()) {
         alert('Molimo popunite sva polja!');
         return;
     }
