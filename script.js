@@ -166,7 +166,9 @@ function setupAuth() {
     });
 
     showPasswordCheckbox.addEventListener('change', () => {
+        console.log('Checkbox "Prikaži šifru" je promenjen. Novo stanje:', showPasswordCheckbox.checked);
         passwordInput.type = showPasswordCheckbox.checked ? 'text' : 'password';
+        console.log('Tip inputa za šifru je postavljen na:', passwordInput.type);
     });
 }
 
@@ -1206,24 +1208,15 @@ function renderFoodSearchList(searchInputEl, containerEl, actionsTemplateFn) {
 }
 
 function renderFoods() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const foodList = document.getElementById('foodList');
-
-    // Ako je pretraga prazna, prikaži sve. U suprotnom, filtriraj.
-    const displayList = searchTerm.length === 0
-        ? foods
-        : foods.filter(food => food.name.toLowerCase().includes(searchTerm));
-
-    if (displayList.length === 0) {
-        foodList.innerHTML = `<div class="empty-state">Nema rezultata.</div>`;
-        return;
-    }
-
-    renderFoodSearchList(document.getElementById('searchInput'), document.getElementById('foodList'), () => `
-        <button class="btn-icon-small" data-action="edit" title="Izmeni namirnicu">✏️</button>
-        <button class="btn-icon-small" data-action="delete" title="Obriši namirnicu">🗑️</button>
-        <button class="btn-icon-small btn-add-food" data-action="add" title="Dodaj u obrok">➕</button>
-    `);
+    renderFoodSearchList(
+        document.getElementById('searchInput'), 
+        document.getElementById('foodList'), 
+        () => `
+            <button class="btn-icon-small" data-action="edit" title="Izmeni namirnicu">✏️</button>
+            <button class="btn-icon-small" data-action="delete" title="Obriši namirnicu">🗑️</button>
+            <button class="btn-icon-small btn-add-food" data-action="add" title="Dodaj u obrok">➕</button>
+        `
+    );
 }
 
 function handleFoodListAction(event) {
