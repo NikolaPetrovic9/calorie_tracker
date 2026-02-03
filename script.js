@@ -94,14 +94,46 @@ function initApp() {
 function setupAuth() {
     const loginOverlay = document.getElementById('loginOverlay');
     const appContainer = document.getElementById('appContainer');
-    const googleSignInBtn = document.getElementById('googleSignInBtn');
-    const loginError = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
+
+    // Novi elementi za email/password prijavu
+    const emailInput = document.getElementById('emailInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const signInBtn = document.getElementById('signInBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const loginError = document.getElementById('loginError');
+
+    const handleAuthError = (error) => {
+        console.error("Greška pri autentifikaciji:", error);
+        switch (error.code) {
+            case 'auth/user-not-found':
+                loginError.textContent = 'Korisnik sa ovim email-om ne postoji.';
+                break;
+            case 'auth/wrong-password':
+                loginError.textContent = 'Pogrešna šifra. Pokušajte ponovo.';
+                break;
+            case 'auth/email-already-in-use':
+                loginError.textContent = 'Email adresa je već registrovana.';
+                break;
+            case 'auth/weak-password':
+                loginError.textContent = 'Šifra mora imati najmanje 6 karaktera.';
+                break;
+            case 'auth/invalid-email':
+                loginError.textContent = 'Unesite ispravnu email adresu.';
+                break;
+            default:
+                loginError.textContent = 'Došlo je do greške. Pokušajte ponovo.';
+        }
+    };
 
     auth.onAuthStateChanged(user => {
         const loadingOverlay = document.getElementById('loadingOverlay');
 
         if (user) {
+            // Očisti polja nakon uspešne prijave
+            emailInput.value = '';
+            passwordInput.value = '';
+            loginError.textContent = '';
             // Korisnik je ulogovan
             loginOverlay.style.display = 'none';
             appContainer.style.display = 'block';
@@ -121,16 +153,32 @@ function setupAuth() {
         }
     });
 
-    googleSignInBtn.addEventListener('click', () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
+    signInBtn.addEventListener('click', () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
         loginError.textContent = '';
-        // Korišćenje signInWithRedirect umesto signInWithPopup za bolju kompatibilnost sa mobilnim uređajima.
-        // Pretraživač će se preusmeriti na Google, a nakon prijave vratiti na aplikaciju.
-        auth.signInWithRedirect(provider)
-            .catch(error => {
-                console.error("Greška pri Google prijavi:", error);
-                loginError.textContent = 'Došlo je do greške prilikom prijave.';
-            });
+
+        if (!email || !password) {
+            loginError.textContent = 'Molimo unesite email i šifru.';
+            return;
+        }
+
+        auth.signInWithEmailAndPassword(email, password)
+            .catch(handleAuthError);
+    });
+
+    registerBtn.addEventListener('click', () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        loginError.textContent = '';
+
+        if (!email || !password) {
+            loginError.textContent = 'Molimo unesite email i šifru.';
+            return;
+        }
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .catch(handleAuthError);
     });
 
     logoutBtn.addEventListener('click', () => {
@@ -140,6 +188,17 @@ function setupAuth() {
 
 function initFirebaseListeners() {
     const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // NOVI KORAK: Provera statusa konekcije sa bazom. Ovo je najvažniji test.
+    const connectedRef = database.ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+      if (snap.val() === true) {
+        console.log("%c✅ Konekcija sa Firebase bazom je USPEŠNA.", "color: green; font-weight: bold;");
+      } else {
+        // Ovo se može desiti kratko pri učitavanju, ali ako ostane, problem je.
+        console.warn("🟡 Konekcija sa Firebase bazom je PREKINUTA ili neuspešna.");
+      }
+    });
 
     const hideLoaderIfNeeded = () => {
         if (initialFoodsLoaded && initialSavedMealsLoaded) {
