@@ -28,7 +28,12 @@ jobs:
           echo "  measurementId: \"${{ secrets.FIREBASE_MEASUREMENT_ID }}\"" >> firebase-config.js
           echo "};" >> firebase-config.js
 
-      # 3. Objavljuje ceo folder (uključujući novi firebase-config.js) na gh-pages granu
+      # 3. Obriši .gitignore da bi se firebase-config.js uključio u deploy
+      # Ovo se dešava samo u privremenom okruženju akcije i ne utiče na tvoj repozitorijum.
+      - name: Remove .gitignore to include ignored files 🗑️
+        run: rm .gitignore
+
+      # 4. Objavljuje ceo folder (uključujući novi firebase-config.js) na gh-pages granu
       - name: Deploy 🚀
         uses: peaceiris/actions-gh-pages@v3
         with:
