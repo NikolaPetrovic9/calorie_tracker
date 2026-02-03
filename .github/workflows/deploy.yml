@@ -1,0 +1,36 @@
+name: Deploy to GitHub Pages
+
+# Pokreni workflow na svaki push na 'main' granu
+on:
+  push:
+    branches:
+      - main # Promeni u 'master' ako ti se glavna grana tako zove
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Preuzmi kod sa tvog repozitorijuma
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+
+      # 2. Kreiraj 'firebase-config.js' fajl koristeći Secrets
+      - name: Create Firebase config file 🔧
+        run: |
+          echo "const firebaseConfig = {" > firebase-config.js
+          echo "  apiKey: \"${{ secrets.FIREBASE_API_KEY }}\"," >> firebase-config.js
+          echo "  authDomain: \"${{ secrets.FIREBASE_AUTH_DOMAIN }}\"," >> firebase-config.js
+          echo "  databaseURL: \"${{ secrets.FIREBASE_DATABASE_URL }}\"," >> firebase-config.js
+          echo "  projectId: \"${{ secrets.FIREBASE_PROJECT_ID }}\"," >> firebase-config.js
+          echo "  storageBucket: \"${{ secrets.FIREBASE_STORAGE_BUCKET }}\"," >> firebase-config.js
+          echo "  messagingSenderId: \"${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}\"," >> firebase-config.js
+          echo "  appId: \"${{ secrets.FIREBASE_APP_ID }}\"," >> firebase-config.js
+          echo "  measurementId: \"${{ secrets.FIREBASE_MEASUREMENT_ID }}\"" >> firebase-config.js
+          echo "};" >> firebase-config.js
+
+      # 3. Objavljuje ceo folder (uključujući novi firebase-config.js) na gh-pages granu
+      - name: Deploy 🚀
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: . # Objavljuje ceo trenutni folder
