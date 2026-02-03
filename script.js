@@ -218,8 +218,8 @@ function initFirebaseListeners() {
     }, 
     (error) => {
         console.error("Firebase greška pri čitanju 'foods':", error);
-        alert("Došlo je do greške pri učitavanju podataka o namirnicama. Proverite konzolu za detalje. Najverovatnije problem sa 'Security Rules'.");
-        auth.signOut(); // Vrati korisnika na login ekran ako podaci ne mogu da se pročitaju
+        // Greška se loguje u konzolu. U produkciji bi se ovde mogla prikazati
+        // poruka korisniku koja ne prekida rad aplikacije.
     });
 
     // Slušaj za promene na sačuvanim jelima
@@ -239,8 +239,7 @@ function initFirebaseListeners() {
     },
     (error) => {
         console.error("Firebase greška pri čitanju 'savedMeals':", error);
-        alert("Došlo je do greške pri učitavanju sačuvanih jela. Proverite konzolu za detalje. Najverovatnije problem sa 'Security Rules'.");
-        auth.signOut(); // Vrati korisnika na login ekran ako podaci ne mogu da se pročitaju
+        // Greška se loguje u konzolu.
     });
 }
 
@@ -248,7 +247,6 @@ function detachFirebaseListeners() {
     foodsRef.off();
     savedMealsRef.off();
     connectedRef.off();
-    });
 }
 
 function addEventListeners() {
