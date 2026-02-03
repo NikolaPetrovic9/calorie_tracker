@@ -517,8 +517,8 @@ function handleMealContainerClick(event) {
             case 'save-as-dish': saveMealPrompt(mealIndex); break;
             case 'clear-meal': clearMeal(mealIndex); break;
             case 'toggle-dish': toggleDishDetails(mealIndex, Number(actionEl.dataset.itemIndex)); break;
-            case 'adjust-dish': adjustDishServing(mealIndex, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount)); break;
-            case 'adjust-qty': adjustQuantity(mealIndex, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount)); break;
+            case 'adjust-dish': if (adjustDishServing(mealIndex, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount))) { saveAppState(); renderMeals(); updateTotals(); } break;
+            case 'adjust-qty': if (adjustItemQuantity(meals[mealIndex].items, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount))) { saveAppState(); renderMeals(); updateTotals(); } break;
             case 'remove-item': removeFromMeal(mealIndex, Number(actionEl.dataset.itemIndex)); break;
         }
     } else {
@@ -539,9 +539,9 @@ function handleMealContainerChange(event) {
     const itemIndex = Number(actionEl.dataset.itemIndex);
 
     if (action === 'set-qty') {
-        setAmount(mealIndex, itemIndex, actionEl.value);
+        if (setItemQuantity(meals[mealIndex].items, itemIndex, actionEl.value)) { saveAppState(); renderMeals(); updateTotals(); }
     } else if (action === 'set-dish') {
-        setDishServing(mealIndex, itemIndex, actionEl.value);
+        if (setDishServing(mealIndex, itemIndex, actionEl.value)) { saveAppState(); renderMeals(); updateTotals(); }
     }
 }
 
@@ -675,6 +675,33 @@ function addFoodToMeal(food) {
     renderFoods(); // FIX: Osveži listu namirnica da prikaže sve
 }
 
+function adjustItemQuantity(items, itemIndex, direction) {
+    const item = items[itemIndex];
+    if (!item || item.isDish) return;
+
+    const step = item.unit === 'kom' ? 1 : 10;
+    const newAmount = item.amount + (direction * step);
+    const minAmount = item.unit === 'kom' ? 1 : 10;
+    
+    if (newAmount >= minAmount) {
+        item.amount = newAmount;
+        return true;
+    }
+    return false;
+}
+
+function setItemQuantity(items, itemIndex, newAmount) {
+    const item = items[itemIndex];
+    if (!item || item.isDish) return;
+
+    const amount = parseFloat(newAmount);
+    if (amount > 0 && !isNaN(amount)) {
+        item.amount = amount;
+        return true;
+    }
+    return false;
+}
+
 function addDishToMeal(savedMeal) {
     if (meals.length === 0) {
         alert('Prvo odaberi broj obroka!');
@@ -684,50 +711,12 @@ function addDishToMeal(savedMeal) {
     const ingredients = JSON.parse(JSON.stringify(savedMeal.foods));
     const totalGrams = ingredients.reduce((sum, f) => sum + f.amount, 0);
 
-    const dishItem = {
-        isDish: true,
-        id: savedMeal.id,
-        name: savedMeal.name,
-        totalGrams: totalGrams,
-        servingGrams: totalGrams,
-        servingPercent: 100,
-        ingredients: ingredients,
-        showDetails: false
-    };
+    const dishItem = { isDish: true, id: savedMeal.id, name: savedMeal.name, totalGrams, servingGrams: totalGrams, servingPercent: 100, ingredients, showDetails: false };
 
     meals[activeMealIndex].items.push(dishItem);
     saveAppState();
     renderMeals();
     updateTotals();
-}
-
-function adjustQuantity(mealIndex, itemIndex, direction) {
-    const item = meals[mealIndex].items[itemIndex];
-    if (!item || item.isDish) return;
-
-    const step = item.unit === 'kom' ? 1 : 10;
-    const newAmount = item.amount + (direction * step);
-    const minAmount = item.unit === 'kom' ? 1 : 10;
-    
-    if (newAmount >= minAmount) {
-        item.amount = newAmount;
-        saveAppState();
-        renderMeals();
-        updateTotals();
-    }
-}
-
-function setAmount(mealIndex, itemIndex, newAmount) {
-    const item = meals[mealIndex].items[itemIndex];
-    if (!item || item.isDish) return;
-
-    const amount = parseFloat(newAmount);
-    if (amount > 0 && !isNaN(amount)) {
-        item.amount = amount;
-        saveAppState();
-        renderMeals();
-        updateTotals();
-    }
 }
 
 function adjustDishServing(mealIndex, itemIndex, grams) {
@@ -738,10 +727,9 @@ function adjustDishServing(mealIndex, itemIndex, grams) {
     if (newServing >= 10) {
         item.servingGrams = newServing;
         item.servingPercent = Math.round((newServing / item.totalGrams) * 100);
-        saveAppState();
-        renderMeals();
-        updateTotals();
+        return true;
     }
+    return false;
 }
 
 function setDishServing(mealIndex, itemIndex, newGrams) {
@@ -752,10 +740,9 @@ function setDishServing(mealIndex, itemIndex, newGrams) {
     if (grams > 0 && !isNaN(grams)) {
         item.servingGrams = grams;
         item.servingPercent = Math.round((grams / item.totalGrams) * 100);
-        saveAppState();
-        renderMeals();
-        updateTotals();
+        return true;
     }
+    return false;
 }
 
 function removeFromMeal(mealIndex, itemIndex) {
@@ -1020,19 +1007,6 @@ function addFoodToEdit(food) {
     renderEditFoodsList();
 }
 
-function adjustEditQuantity(index, dir) {
-    const f = editWorkspaceItems[index];
-    const s = f.unit === 'kom' ? 1 : 10;
-    const n = f.amount + (dir * s);
-    if (n >= (f.unit==='kom'?1:10)) { f.amount = n; renderEditFoodsList(); }
-}
-
-function setEditAmount(index, val) {
-    const f = editWorkspaceItems[index];
-    const v = parseFloat(val);
-    if (v > 0 && !isNaN(v)) { f.amount = v; renderEditFoodsList(); }
-}
-
 function removeFromEdit(index) {
     editWorkspaceItems.splice(index, 1);
     renderEditFoodsList();
@@ -1051,8 +1025,7 @@ function handleEditWorkspaceClick(event) {
 
     switch(action) {
         case 'adjust-edit-qty':
-            adjustEditQuantity(itemIndex, Number(actionEl.dataset.amount));
-            break;
+            if (adjustItemQuantity(editWorkspaceItems, itemIndex, Number(actionEl.dataset.amount))) { renderEditFoodsList(); } break;
         case 'remove-from-edit':
             removeFromEdit(itemIndex);
             break;
@@ -1068,7 +1041,7 @@ function handleEditWorkspaceChange(event) {
     const action = actionEl.dataset.action;
 
     if (action === 'set-edit-qty') {
-        setEditAmount(itemIndex, actionEl.value);
+        if (setItemQuantity(editWorkspaceItems, itemIndex, actionEl.value)) { renderEditFoodsList(); }
     }
 }
 
