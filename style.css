@@ -605,6 +605,16 @@ body {
     line-height: 1.5;
 }
 
+.show-password-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: -5px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #555;
+}
+
 .btn-google {
     background-color: #fff;
     color: #444;
