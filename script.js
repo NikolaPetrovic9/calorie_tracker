@@ -37,6 +37,11 @@ let dailyGoal = 0;
 let currentMealCount = 3;
 let savedMeals = [];
 
+// Firebase Refs for listeners
+const foodsRef = database.ref('foods');
+const savedMealsRef = database.ref('savedMeals');
+const connectedRef = database.ref(".info/connected");
+
 // Edit mode varijable
 let currentlyEditingMealId = null;
 let editWorkspaceItems = [];
@@ -138,6 +143,7 @@ function setupAuth() {
             }
         } else {
             // Korisnik nije ulogovan
+            detachFirebaseListeners(); // Prekini slušanje da se izbegnu 'permission denied' greške
             loginOverlay.style.display = 'flex';
             appContainer.style.display = 'none';
             window.appInitialized = false;
@@ -166,23 +172,19 @@ function setupAuth() {
     });
 
     showPasswordCheckbox.addEventListener('change', () => {
-        console.log('Checkbox "Prikaži šifru" je promenjen. Novo stanje:', showPasswordCheckbox.checked);
         passwordInput.type = showPasswordCheckbox.checked ? 'text' : 'password';
-        console.log('Tip inputa za šifru je postavljen na:', passwordInput.type);
     });
 }
 
 function initFirebaseListeners() {
     const loadingOverlay = document.getElementById('loadingOverlay');
 
-    // NOVI KORAK: Provera statusa konekcije sa bazom. Ovo je najvažniji test.
-    const connectedRef = database.ref(".info/connected");
+    // Provera statusa konekcije sa bazom.
     connectedRef.on("value", (snap) => {
       if (snap.val() === true) {
-        console.log("%c✅ Konekcija sa Firebase bazom je USPEŠNA.", "color: green; font-weight: bold;");
+        // Konekcija je uspešna, ne treba logovati u produkciji.
       } else {
-        // Ovo se može desiti kratko pri učitavanju, ali ako ostane, problem je.
-        console.warn("🟡 Konekcija sa Firebase bazom je PREKINUTA ili neuspešna.");
+        // Konekcija je prekinuta. Listener će pokušati da se rekonektuje.
       }
     });
 
@@ -193,7 +195,7 @@ function initFirebaseListeners() {
     };
 
     // Slušaj za promene na listi namirnica
-    database.ref('foods').on('value', 
+    foodsRef.on('value', 
     (snapshot) => {
         const data = snapshot.val();
         foods = []; // Isprazni lokalnu listu
@@ -221,7 +223,7 @@ function initFirebaseListeners() {
     });
 
     // Slušaj za promene na sačuvanim jelima
-    database.ref('savedMeals').on('value', 
+    savedMealsRef.on('value', 
     (snapshot) => {
         const data = snapshot.val();
         savedMeals = []; // Isprazni lokalnu listu
@@ -239,6 +241,13 @@ function initFirebaseListeners() {
         console.error("Firebase greška pri čitanju 'savedMeals':", error);
         alert("Došlo je do greške pri učitavanju sačuvanih jela. Proverite konzolu za detalje. Najverovatnije problem sa 'Security Rules'.");
         auth.signOut(); // Vrati korisnika na login ekran ako podaci ne mogu da se pročitaju
+    });
+}
+
+function detachFirebaseListeners() {
+    foodsRef.off();
+    savedMealsRef.off();
+    connectedRef.off();
     });
 }
 
