@@ -290,10 +290,32 @@ function addEventListeners() {
 // ========================================
 
 function areCalcInputsValid() {
-    const weight = document.getElementById('weight').value;
-    const height = document.getElementById('height').value;
-    const age = document.getElementById('age').value;
-    return weight && height && age;
+    const fields = [
+        { el: document.getElementById('weight'), name: 'Težina', min: 30, max: 300 },
+        { el: document.getElementById('height'), name: 'Visina', min: 100, max: 250 },
+        { el: document.getElementById('age'), name: 'Godine', min: 15, max: 100 }
+    ];
+
+    for (const field of fields) {
+        const valueStr = field.el.value.trim();
+        if (!valueStr) {
+            alert(`Polje "${field.name}" ne sme biti prazno.`);
+            field.el.focus();
+            return false;
+        }
+        const value = parseFloat(valueStr);
+        if (isNaN(value)) {
+            alert(`Unesite ispravan broj za polje "${field.name}".`);
+            field.el.focus();
+            return false;
+        }
+        if (value < field.min || value > field.max) {
+            alert(`Vrednost za polje "${field.name}" mora biti između ${field.min} i ${field.max}.`);
+            field.el.focus();
+            return false;
+        }
+    }
+    return true;
 }
 
 function updateGoalCalculationUI() {
@@ -304,7 +326,7 @@ function updateGoalCalculationUI() {
     const activity = parseFloat(document.getElementById('activity').value);
     const goalPercentage = parseFloat(document.getElementById('goalType').value);
 
-    if (!areCalcInputsValid()) return;
+    if (!areCalcInputsValid()) return false; // Vrati false ako validacija ne uspe
 
     let bmr;
     if (gender === 'female') {
@@ -332,21 +354,20 @@ function updateGoalCalculationUI() {
     document.getElementById('formulaUsed').textContent = `Harris-Benedict (${gender === 'female' ? 'žene' : 'muškarci'})`;
     document.getElementById('result').style.display = 'block';
     updateTotals();
+    return true; // Vrati true za uspeh
 }
 
 function recalculateFromSavedState() {
-    if (!areCalcInputsValid()) return;
-    updateGoalCalculationUI();
+    updateGoalCalculationUI(); // Ova funkcija sada sama radi validaciju
 }
 
 function calculate(event) {
     event.preventDefault();
-    if (!areCalcInputsValid()) {
-        alert('Molimo popunite sva polja!');
-        return;
+    // updateGoalCalculationUI vraća true ako je validacija prošla
+    const success = updateGoalCalculationUI();
+    if (success) {
+        saveAppState();
     }
-    updateGoalCalculationUI();
-    saveAppState();
 }
 
 // ========================================
@@ -546,9 +567,25 @@ function handleMealContainerChange(event) {
     const itemIndex = Number(actionEl.dataset.itemIndex);
 
     if (action === 'set-qty') {
-        if (setItemQuantity(meals[mealIndex].items, itemIndex, actionEl.value)) { saveAppState(); renderMeals(); updateTotals(); }
+        const result = setItemQuantity(meals[mealIndex].items, itemIndex, actionEl.value);
+        if (result.success) {
+            saveAppState();
+            renderMeals();
+            updateTotals();
+        } else if (result.oldValue !== undefined) {
+            alert(`Unesite ispravnu količinu (pozitivan broj).`);
+            actionEl.value = result.oldValue; // Vrati na staru vrednost
+        }
     } else if (action === 'set-dish') {
-        if (setDishServing(mealIndex, itemIndex, actionEl.value)) { saveAppState(); renderMeals(); updateTotals(); }
+        const result = setDishServing(mealIndex, itemIndex, actionEl.value);
+        if (result.success) {
+            saveAppState();
+            renderMeals();
+            updateTotals();
+        } else if (result.oldValue !== undefined) {
+            alert(`Unesite ispravnu količinu (pozitivan broj u gramima).`);
+            actionEl.value = result.oldValue; // Vrati na staru vrednost
+        }
     }
 }
 
@@ -597,6 +634,7 @@ function renderDishItem(dish, mealIndex, itemIndex) {
                         step="10"
                         data-action="set-dish"
                         data-item-index="${itemIndex}"
+                        inputmode="decimal"
                     >
                     <span class="quantity-unit">g</span>
                 </div>
@@ -629,6 +667,7 @@ function renderFoodItem(food, mealIndex, itemIndex) {
                         step="${food.unit === 'kom' ? 1 : 10}"
                         data-action="set-qty"
                         data-item-index="${itemIndex}"
+                        inputmode="decimal"
                     >
                     <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
                 </div>
@@ -697,16 +736,19 @@ function adjustItemQuantity(items, itemIndex, direction) {
     return false;
 }
 
-function setItemQuantity(items, itemIndex, newAmount) {
+function setItemQuantity(items, itemIndex, newAmountStr) {
     const item = items[itemIndex];
-    if (!item || item.isDish) return;
+    if (!item || item.isDish) return { success: false };
 
-    const amount = parseFloat(newAmount);
-    if (amount > 0 && !isNaN(amount)) {
-        item.amount = amount;
-        return true;
+    const newAmount = parseFloat(newAmountStr);
+
+    // Dozvoljavamo unos bilo kog pozitivnog broja.
+    if (isNaN(newAmount) || newAmount <= 0) {
+        return { success: false, oldValue: item.amount };
     }
-    return false;
+
+    item.amount = newAmount;
+    return { success: true };
 }
 
 function addDishToMeal(savedMeal) {
@@ -739,17 +781,18 @@ function adjustDishServing(mealIndex, itemIndex, grams) {
     return false;
 }
 
-function setDishServing(mealIndex, itemIndex, newGrams) {
+function setDishServing(mealIndex, itemIndex, newGramsStr) {
     const item = meals[mealIndex].items[itemIndex];
-    if (!item || !item.isDish) return;
+    if (!item || !item.isDish) return { success: false };
 
-    const grams = parseFloat(newGrams);
-    if (grams > 0 && !isNaN(grams)) {
-        item.servingGrams = grams;
-        item.servingPercent = Math.round((grams / item.totalGrams) * 100);
-        return true;
+    const grams = parseFloat(newGramsStr);
+    if (isNaN(grams) || grams <= 0) {
+        return { success: false, oldValue: item.servingGrams };
     }
-    return false;
+
+    item.servingGrams = grams;
+    item.servingPercent = Math.round((grams / item.totalGrams) * 100);
+    return { success: true };
 }
 
 function removeFromMeal(mealIndex, itemIndex) {
@@ -858,7 +901,7 @@ function saveMealPrompt(mealIndex) {
 
 function renderSavedMeals() {
     const container = document.getElementById('savedMealsContainer');
-    const searchTerm = (document.getElementById('savedMealsSearch')?.value || '').toLowerCase();
+    const searchTerm = (document.getElementById('savedMealsSearch')?.value || '').trim().toLowerCase();
     
     const filtered = savedMeals.filter(meal => 
         meal.name.toLowerCase().includes(searchTerm)
@@ -990,7 +1033,7 @@ function renderEditFoodsList() {
                  <div class="edit-food-controls">
                      <button class="quantity-btn" data-action="adjust-edit-qty" data-amount="-1">−</button>
                      <div class="quantity-input-wrapper">
-                         <input type="number" class="quantity-input" value="${food.amount}" min="${food.unit==='kom'?1:10}" step="${food.unit==='kom'?1:10}" data-action="set-edit-qty">
+                         <input type="number" class="quantity-input" value="${food.amount}" min="${food.unit==='kom'?1:10}" step="${food.unit==='kom'?1:10}" data-action="set-edit-qty" inputmode="decimal">
                          <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
                      </div>
                      <button class="quantity-btn" data-action="adjust-edit-qty" data-amount="1">+</button>
@@ -1048,7 +1091,13 @@ function handleEditWorkspaceChange(event) {
     const action = actionEl.dataset.action;
 
     if (action === 'set-edit-qty') {
-        if (setItemQuantity(editWorkspaceItems, itemIndex, actionEl.value)) { renderEditFoodsList(); }
+        const result = setItemQuantity(editWorkspaceItems, itemIndex, actionEl.value);
+        if (result.success) {
+            renderEditFoodsList();
+        } else if (result.oldValue !== undefined) {
+            alert(`Unesite ispravnu količinu (pozitivan broj).`);
+            actionEl.value = result.oldValue; // Vrati na staru vrednost
+        }
     }
 }
 
@@ -1176,7 +1225,7 @@ function updateTotals() {
  * @param {Function} actionsTemplateFn - Funkcija koja vraća HTML string za akcione dugmiće.
  */
 function renderFoodSearchList(searchInputEl, containerEl, actionsTemplateFn) {
-    const searchTerm = searchInputEl.value.toLowerCase();
+    const searchTerm = searchInputEl.value.trim().toLowerCase();
     
     const displayList = searchTerm.length === 0
         ? foods
@@ -1357,7 +1406,7 @@ function saveFood(event) {
     event.preventDefault();
     const foodId = document.getElementById('foodId').value;
     const foodData = {
-        name: document.getElementById('foodName').value,
+        name: document.getElementById('foodName').value.trim(),
         calories: parseFloat(document.getElementById('foodCalories').value),
         protein: parseFloat(document.getElementById('foodProtein').value),
         fat: parseFloat(document.getElementById('foodFat').value),
@@ -1366,11 +1415,45 @@ function saveFood(event) {
         unit: document.getElementById('foodUnit').value,
     };
 
-    // Validacija
-    if (foodData.calories < 0 || foodData.protein < 0 || foodData.fat < 0 || foodData.carbs < 0 || foodData.serving <= 0) {
-        alert("Vrednosti za kalorije, makronutrijente i porciju ne mogu biti negativne, a porcija mora biti veća od 0.");
+    // --- Poboljšana Validacija ---
+    if (!foodData.name) {
+        alert("Naziv namirnice ne sme biti prazan.");
+        document.getElementById('foodName').focus();
         return;
     }
+
+    const validations = [
+        { key: 'calories', name: 'Kalorije', el: document.getElementById('foodCalories') },
+        { key: 'protein', name: 'Proteini', el: document.getElementById('foodProtein') },
+        { key: 'fat', name: 'Masti', el: document.getElementById('foodFat') },
+        { key: 'carbs', name: 'Ugljeni hidrati', el: document.getElementById('foodCarbs') },
+        { key: 'serving', name: 'Standardna porcija', el: document.getElementById('foodServing') }
+    ];
+
+    for (const v of validations) {
+        const value = foodData[v.key];
+
+        if (isNaN(value)) {
+            alert(`Polje "${v.name}" mora biti ispravan broj.`);
+            v.el.focus();
+            return;
+        }
+
+        if (v.key === 'serving') {
+            if (value <= 0) {
+                alert(`Polje "${v.name}" mora biti veće od 0.`);
+                v.el.focus();
+                return;
+            }
+        } else {
+            if (value < 0) {
+                alert(`Polje "${v.name}" ne sme biti negativno.`);
+                v.el.focus();
+                return;
+            }
+        }
+    }
+    // --- Kraj Validacije ---
 
     if (foodId) {
         // Update
