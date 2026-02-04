@@ -50,6 +50,7 @@ let originalEditItems = [];
 // Imena obroka
 let initialFoodsLoaded = false;
 let initialSavedMealsLoaded = false;
+let eventListenersAttached = false; // NOVO: Sprečava dupliranje listenera
 
 const mealNames = {
     3: ['Doručak', 'Ručak', 'Večera'],
@@ -250,6 +251,9 @@ function detachFirebaseListeners() {
 }
 
 function addEventListeners() {
+    // FIX: Ako su listeneri već zakačeni, ne dodaj ih ponovo
+    if (eventListenersAttached) return;
+
     document.getElementById('calculateBtn').addEventListener('click', calculate);
     document.querySelectorAll('.meal-count-btn').forEach(btn => {
         btn.addEventListener('click', () => setMealCount(Number(btn.dataset.count)));
@@ -276,6 +280,9 @@ function addEventListeners() {
     foodModal.addEventListener('click', handleFoodFormModalClick); // Za zatvaranje na klik pozadine
     document.getElementById('foodForm').addEventListener('submit', saveFood); // Za submit forme
     document.getElementById('saveFoodBtn').addEventListener('click', () => document.getElementById('foodForm').requestSubmit()); // Povezivanje dugmeta van forme
+
+    // Obeleži da su listeneri zakačeni
+    eventListenersAttached = true;
 }
 
 // ========================================
