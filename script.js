@@ -1091,7 +1091,10 @@ function closeEditPanel() {
 function handleEditPanelClick(event) {
     const target = event.target;
     // Zatvori ako se klikne na pozadinu
-    if (target.id === 'editPanel') {
+    // Proveravamo da li je klik bio direktno na pozadinu (overlay), a ne na neki element unutar prozora.
+    // `event.currentTarget` je element na kojem je listener (ceo modal), a `target` je ono što je stvarno kliknuto.
+    // Zatvaramo samo ako su isti.
+    if (target === event.currentTarget) {
         cancelEditMode();
         return;
     }
@@ -1386,7 +1389,8 @@ function saveFood(event) {
 }
 
 function handleFoodFormModalClick(event) {
-    if (event.target.id === 'foodFormModal' || event.target.closest('[data-action="close-food-form"]')) {
+    // Primenjujemo istu, pouzdaniju logiku za zatvaranje na klik pozadine kao i za drugi modal.
+    if (event.target === event.currentTarget || event.target.closest('[data-action="close-food-form"]')) {
         closeFoodForm();
     }
 }
