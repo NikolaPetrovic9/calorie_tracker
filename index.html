@@ -207,12 +207,12 @@
             <div class="edit-panel-body">
                 <form id="foodForm">
                     <input type="hidden" id="foodId">
-                    <div class="input-group"><label for="foodName">Naziv</label><input type="text" id="foodName" required></div>
-                    <div class="input-group"><label for="foodCalories">Kalorije</label><input type="number" id="foodCalories" min="0" required></div>
-                    <div class="input-group"><label for="foodProtein">Proteini</label><input type="number" step="0.1" id="foodProtein" min="0" required></div>
-                    <div class="input-group"><label for="foodFat">Masti</label><input type="number" step="0.1" id="foodFat" min="0" required></div>
-                    <div class="input-group"><label for="foodCarbs">Ugljeni hidrati</label><input type="number" step="0.1" id="foodCarbs" min="0" required></div>
-                    <div class="input-group"><label for="foodServing">Standardna porcija</label><input type="number" id="foodServing" value="100" min="1" required></div>
+                    <div class="input-group"><label for="foodName">Naziv</label><input type="text" id="foodName" required /></div>
+                    <div class="input-group"><label for="foodCalories">Kalorije</label><input type="number" id="foodCalories" min="0" required inputmode="decimal" /></div>
+                    <div class="input-group"><label for="foodProtein">Proteini</label><input type="number" step="0.1" id="foodProtein" min="0" required inputmode="decimal" /></div>
+                    <div class="input-group"><label for="foodFat">Masti</label><input type="number" step="0.1" id="foodFat" min="0" required inputmode="decimal" /></div>
+                    <div class="input-group"><label for="foodCarbs">Ugljeni hidrati</label><input type="number" step="0.1" id="foodCarbs" min="0" required inputmode="decimal" /></div>
+                    <div class="input-group"><label for="foodServing">Standardna porcija</label><input type="number" id="foodServing" value="100" min="1" required inputmode="decimal" /></div>
                     <div class="input-group">
                         <label for="foodUnit">Jedinica</label>
                         <select id="foodUnit">
