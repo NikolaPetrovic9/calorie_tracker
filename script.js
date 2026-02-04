@@ -1224,6 +1224,93 @@ function handleFoodListAction(event) {
 // UPRAVLJANJE NAMIRNICAMA (NOVO)
 // ========================================
 
+// NOVO: Funkcije za propagiranje izmena na namirnicama
+
+/**
+ * Pomoćna funkcija koja ažurira podatke o namirnici unutar objekta
+ * jela ili obroka, čuvajući pritom specifičnu količinu ('amount').
+ * @param {object} item - Stavka namirnice unutar niza (npr. meals[0].items[0])
+ * @param {object} updatedFoodData - Novi podaci o namirnici iz forme.
+ */
+function updateFoodPropertiesInPlace(item, updatedFoodData) {
+    item.name = updatedFoodData.name;
+    item.protein = updatedFoodData.protein;
+    item.fat = updatedFoodData.fat;
+    item.carbs = updatedFoodData.carbs;
+    item.unit = updatedFoodData.unit;
+    
+    // Ažuriranje 'base' vrednosti koje se koriste za kalkulaciju
+    item.calories = updatedFoodData.calories;
+    item.serving = updatedFoodData.serving;
+    item.baseCalories = updatedFoodData.calories;
+    item.baseServing = updatedFoodData.serving;
+}
+
+/**
+ * Glavna funkcija koja se poziva nakon izmene namirnice.
+ * Pronalazi sva mesta gde se ta namirnica koristi (trenutni obroci, sačuvana jela)
+ * i ažurira ih sa novim podacima.
+ * @param {string} foodId - ID izmenjene namirnice.
+ * @param {object} updatedFoodData - Novi podaci o namirnici.
+ */
+function updateFoodInDependentItems(foodId, updatedFoodData) {
+    // 1. Ažuriranje trenutnih obroka (u memoriji i localStorage)
+    let mealsModified = false;
+    meals.forEach(meal => {
+        meal.items.forEach(item => {
+            // Ažuriranje direktno dodatih namirnica
+            if (!item.isDish && item.id === foodId) {
+                updateFoodPropertiesInPlace(item, updatedFoodData);
+                mealsModified = true;
+            }
+            // Ažuriranje namirnica unutar jela (dishes)
+            if (item.isDish) {
+                item.ingredients.forEach(ingredient => {
+                    if (ingredient.id === foodId) {
+                        updateFoodPropertiesInPlace(ingredient, updatedFoodData);
+                        mealsModified = true;
+                    }
+                });
+            }
+        });
+    });
+
+    if (mealsModified) {
+        saveAppState();
+        renderMeals();
+        updateTotals();
+    }
+
+    // 2. Ažuriranje sačuvanih jela u Firebase bazi
+    database.ref('savedMeals').once('value', snapshot => {
+        const allSavedMeals = snapshot.val();
+        if (!allSavedMeals) return;
+
+        const updates = {};
+        Object.keys(allSavedMeals).forEach(savedMealId => {
+            const savedMeal = allSavedMeals[savedMealId];
+            if (savedMeal.foods && Array.isArray(savedMeal.foods)) {
+                savedMeal.foods.forEach((foodItem, index) => {
+                    if (foodItem.id === foodId) {
+                        const path = `savedMeals/${savedMealId}/foods/${index}`;
+                        // Kreiraj privremenu kopiju objekta da bi se modifikovala
+                        const updatedItem = { ...foodItem };
+                        updateFoodPropertiesInPlace(updatedItem, updatedFoodData);
+                        updates[path] = updatedItem;
+                    }
+                });
+            }
+        });
+
+        if (Object.keys(updates).length > 0) {
+            database.ref().update(updates).catch(err => {
+                console.error("Greška pri ažuriranju namirnica u sačuvanim jelima:", err);
+                alert("Došlo je do greške pri ažuriranju sačuvanih jela.");
+            });
+        }
+    });
+}
+
 function openFoodForm(foodId = null) {
     const modal = document.getElementById('foodFormModal');
     const form = document.getElementById('foodForm');
@@ -1277,7 +1364,14 @@ function saveFood(event) {
 
     if (foodId) {
         // Update
-        database.ref(`foods/${foodId}`).update(foodData).then(closeFoodForm);
+        database.ref(`foods/${foodId}`).update(foodData).then(() => {
+            // Pozovi funkciju koja ažurira namirnicu u svim jelima i obrocima
+            updateFoodInDependentItems(foodId, foodData);
+            closeFoodForm();
+        }).catch(err => {
+            console.error("Greška pri ažuriranju namirnice:", err);
+            alert("Došlo je do greške pri ažuriranju namirnice.");
+        });
     } else {
         // Create
         database.ref('foods').push(foodData).then(closeFoodForm);
