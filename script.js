@@ -635,6 +635,7 @@ function renderDishItem(dish, mealIndex, itemIndex) {
                         data-action="set-dish"
                         data-item-index="${itemIndex}"
                         inputmode="decimal"
+                        autocomplete="off"
                     >
                     <span class="quantity-unit">g</span>
                 </div>
@@ -668,6 +669,7 @@ function renderFoodItem(food, mealIndex, itemIndex) {
                         data-action="set-qty"
                         data-item-index="${itemIndex}"
                         inputmode="decimal"
+                        autocomplete="off"
                     >
                     <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
                 </div>
@@ -1033,7 +1035,7 @@ function renderEditFoodsList() {
                  <div class="edit-food-controls">
                      <button class="quantity-btn" data-action="adjust-edit-qty" data-amount="-1">−</button>
                      <div class="quantity-input-wrapper">
-                         <input type="number" class="quantity-input" value="${food.amount}" min="${food.unit==='kom'?1:10}" step="${food.unit==='kom'?1:10}" data-action="set-edit-qty" inputmode="decimal">
+                         <input type="number" class="quantity-input" value="${food.amount}" min="${food.unit==='kom'?1:10}" step="${food.unit==='kom'?1:10}" data-action="set-edit-qty" inputmode="decimal" autocomplete="off">
                          <span class="quantity-unit">${sanitizeHTML(food.unit)}</span>
                      </div>
                      <button class="quantity-btn" data-action="adjust-edit-qty" data-amount="1">+</button>
