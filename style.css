@@ -223,6 +223,7 @@ body {
     border-radius: 6px;
     border-left: 3px solid var(--accent-green);
     word-break: break-word;
+    display: none;
     margin-top: 5px;
 }
 .meal-food-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -374,7 +375,6 @@ body {
 }
 
 .accordion-content {
-    display: none;
     overflow: hidden;
 }
 
