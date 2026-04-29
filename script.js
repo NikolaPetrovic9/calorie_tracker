@@ -546,6 +546,7 @@ function handleMealContainerClick(event) {
             case 'save-as-dish': saveMealPrompt(mealIndex); break;
             case 'clear-meal': clearMeal(mealIndex); break;
             case 'toggle-dish': toggleDishDetails(mealIndex, Number(actionEl.dataset.itemIndex)); break;
+            case 'toggle-dish-recipe': toggleDishRecipe(mealIndex, Number(actionEl.dataset.itemIndex)); break;
             case 'adjust-dish': if (adjustDishServing(mealIndex, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount))) { saveAppState(); renderMeals(); updateTotals(); } break;
             case 'adjust-qty': if (adjustItemQuantity(meals[mealIndex].items, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount))) { saveAppState(); renderMeals(); updateTotals(); } break;
             case 'remove-item': removeFromMeal(mealIndex, Number(actionEl.dataset.itemIndex)); break;
@@ -611,24 +612,35 @@ function renderDishItem(dish, mealIndex, itemIndex) {
                         ${dish.servingGrams}g (${dish.servingPercent}%) • 
                         P: ${dishStats.protein}g M: ${dishStats.fat}g UH: ${dishStats.carbs}g
                     </div>
-                    ${dish.notes ? `
+                    
+                    <div class="dish-item-toggles">
+                        <button class="btn-recipe-toggle" data-action="toggle-dish" data-item-index="${itemIndex}">
+                            ${isExpanded ? '📂 Sakrij sastojke' : '📁 Sastojci'}
+                        </button>
+                        ${dish.notes ? `
+                            <button class="btn-recipe-toggle" data-action="toggle-dish-recipe" data-item-index="${itemIndex}">
+                                ${dish.showRecipe ? '📖 Sakrij recept' : '📖 Recept'}
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <div class="accordion-content ${dish.showRecipe ? 'open' : ''}">
                         <div class="meal-food-notes">
-                            📝 ${sanitizeHTML(dish.notes)}
+                            📝 <strong>Recept:</strong> ${sanitizeHTML(dish.notes)}
                         </div>
-                    ` : ''}
+                    </div>
+
+                    <div class="accordion-content ${isExpanded ? 'open' : ''}">
+                        <div class="dish-details">
+                            <div class="dish-details-tags">
+                                ${dish.ingredients.map(ing => `
+                                    <span class="ingredient-tag">${sanitizeHTML(ing.name)} ${ing.amount}${sanitizeHTML(ing.unit)}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <span class="expand-icon">${isExpanded ? '▼' : '▶'}</span>
             </div>
-            ${isExpanded ? `
-                <div class="dish-details">
-                    <div class="dish-details-header">Sastojci (ukupno ${dish.totalGrams}g):</div>
-                    ${dish.ingredients.map(ing => `
-                        <div class="dish-ingredient">
-                            • ${sanitizeHTML(ing.name)}: ${ing.amount}${sanitizeHTML(ing.unit)}
-                        </div>
-                    `).join('')}
-                </div>
-            ` : ''}
             <div class="meal-food-controls">
                 <button class="quantity-btn" data-action="adjust-dish" data-item-index="${itemIndex}" data-amount="-10">−</button>
                 <div class="quantity-input-wrapper">
@@ -691,6 +703,14 @@ function toggleDishDetails(mealIndex, itemIndex) {
     const item = meals[mealIndex].items[itemIndex];
     if (item && item.isDish) {
         item.showDetails = !item.showDetails;
+        renderMeals();
+    }
+}
+
+function toggleDishRecipe(mealIndex, itemIndex) {
+    const item = meals[mealIndex].items[itemIndex];
+    if (item && item.isDish) {
+        item.showRecipe = !item.showRecipe;
         renderMeals();
     }
 }
@@ -943,7 +963,10 @@ function renderSavedMeals() {
                     <div class="saved-meal-calories" style="font-weight: bold; color: var(--accent-green);">${stats.calories} kcal</div>
                 </div>
                 ${meal.notes ? `
-                    <div class="saved-meal-recipe">
+                    <button class="btn-recipe-toggle" data-action="toggle-recipe">
+                        ${meal.showRecipe ? '📖 Sakrij recept' : '📖 Prikaži recept'}
+                    </button>
+                    <div class="saved-meal-recipe accordion-content ${meal.showRecipe ? 'open' : ''}">
                         <strong>Recept:</strong> ${sanitizeHTML(meal.notes)}
                     </div>
                 ` : ''}
@@ -983,6 +1006,10 @@ function handleSavedMealAction(event) {
     switch (action) {
         case 'add':
             addDishToMeal(meal);
+            break;
+        case 'toggle-recipe':
+            meal.showRecipe = !meal.showRecipe;
+            renderSavedMeals();
             break;
         case 'edit':
             editSavedMeal(meal.id);
@@ -1152,7 +1179,21 @@ function saveEditedMeal() {
         foods: editWorkspaceItems.map(f => ({ ...f, isDish: false }))
     };
     database.ref(`savedMeals/${currentlyEditingMealId}`).set(updatedData)
-        .then(() => closeEditPanel());
+        .then(() => {
+            // Ažuriraj i sva jela koja su već dodata u dnevne obroke
+            meals.forEach(meal => {
+                meal.items.forEach(item => {
+                    if (item.isDish && item.id === currentlyEditingMealId) {
+                        item.notes = updatedNotes;
+                        item.ingredients = JSON.parse(JSON.stringify(updatedData.foods));
+                        item.name = meal.name; // Osiguraj da i ime ostane isto
+                    }
+                });
+            });
+            saveAppState();
+            renderMeals();
+            closeEditPanel();
+        });
 }
 
 function cancelEditMode() {
