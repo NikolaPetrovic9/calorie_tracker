@@ -611,6 +611,11 @@ function renderDishItem(dish, mealIndex, itemIndex) {
                         ${dish.servingGrams}g (${dish.servingPercent}%) • 
                         P: ${dishStats.protein}g M: ${dishStats.fat}g UH: ${dishStats.carbs}g
                     </div>
+                    ${dish.notes ? `
+                        <div class="meal-food-notes" style="font-size: 0.8rem; font-style: italic; color: var(--accent-green); margin-top: 4px;">
+                            📝 ${sanitizeHTML(dish.notes)}
+                        </div>
+                    ` : ''}
                 </div>
                 <span class="expand-icon">${isExpanded ? '▼' : '▶'}</span>
             </div>
@@ -763,7 +768,17 @@ function addDishToMeal(savedMeal) {
     const ingredients = JSON.parse(JSON.stringify(savedMeal.foods));
     const totalGrams = ingredients.reduce((sum, f) => sum + f.amount, 0);
 
-    const dishItem = { isDish: true, id: savedMeal.id, name: savedMeal.name, totalGrams, servingGrams: totalGrams, servingPercent: 100, ingredients, showDetails: false };
+    const dishItem = { 
+        isDish: true, 
+        id: savedMeal.id, 
+        name: savedMeal.name, 
+        notes: savedMeal.notes || '', 
+        totalGrams, 
+        servingGrams: totalGrams, 
+        servingPercent: 100, 
+        ingredients, 
+        showDetails: false 
+    };
 
     meals[activeMealIndex].items.push(dishItem);
     saveAppState();
@@ -886,9 +901,12 @@ function saveMealPrompt(mealIndex) {
 
     const name = prompt('Unesi naziv novog jela:');
     if (!name || name.trim() === '') return;
+    
+    const notes = prompt('Unesi recept ili napomenu (opciono):');
 
     const savedMeal = {
         name: name.trim(),
+        notes: (notes || '').trim(),
         foods: foodsOnly.map(f => ({ ...f, isDish: false }))
     };
     database.ref('savedMeals').push(savedMeal)
@@ -919,10 +937,15 @@ function renderSavedMeals() {
         const stats = calculateSavedMealStats(meal);
         return `
             <div class="saved-meal" data-meal-id="${meal.id}">
-                <div class="saved-meal-header">
+                <div class="saved-meal-header" style="flex-direction: column; align-items: flex-start; gap: 5px;">
                     <div class="saved-meal-name">${sanitizeHTML(meal.name)}</div>
-                    <div class="saved-meal-calories">${stats.calories} kcal</div>
+                    <div class="saved-meal-calories" style="font-weight: bold; color: var(--accent-green);">${stats.calories} kcal</div>
                 </div>
+                ${meal.notes ? `
+                    <div class="saved-meal-recipe" style="font-size: 0.85rem; margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-left: 3px solid var(--accent-green); border-radius: 4px; overflow-wrap: break-word;">
+                        <strong>Recept:</strong> ${sanitizeHTML(meal.notes)}
+                    </div>
+                ` : ''}
                 <div class="saved-meal-macros">
                     <span class="saved-macro-item">P: ${stats.protein}g</span>
                     <span class="saved-macro-item">M: ${stats.fat}g</span>
@@ -1000,6 +1023,7 @@ function editSavedMeal(mealId) {
     originalEditItems = JSON.parse(JSON.stringify(meal.foods));
     document.getElementById('editPanel').style.display = 'flex';
     document.getElementById('editMealName').textContent = meal.name;
+    document.getElementById('editMealNotes').value = meal.notes || '';
     document.body.style.overflow = 'hidden';
     
     // Čistimo search input i prikazujemo SVE namirnice odmah
@@ -1119,8 +1143,11 @@ function saveEditedMeal() {
     if (!meal) { closeEditPanel(); return; }
     if (editWorkspaceItems.length === 0) { alert('Jelo ne može biti prazno!'); return; }
     
+    const updatedNotes = document.getElementById('editMealNotes').value.trim();
+
     const updatedData = {
         name: meal.name,
+        notes: updatedNotes,
         foods: editWorkspaceItems.map(f => ({ ...f, isDish: false }))
     };
     database.ref(`savedMeals/${currentlyEditingMealId}`).set(updatedData)
