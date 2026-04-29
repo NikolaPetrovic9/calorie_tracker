@@ -546,6 +546,7 @@ function handleMealContainerClick(event) {
             case 'save-as-dish': saveMealPrompt(mealIndex); break;
             case 'clear-meal': clearMeal(mealIndex); break;
             case 'toggle-dish': toggleDishDetails(mealIndex, Number(actionEl.dataset.itemIndex)); break;
+            case 'toggle-dish-recipe': toggleDishRecipe(mealIndex, Number(actionEl.dataset.itemIndex)); break;
             case 'adjust-dish': if (adjustDishServing(mealIndex, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount))) { saveAppState(); renderMeals(); updateTotals(); } break;
             case 'adjust-qty': if (adjustItemQuantity(meals[mealIndex].items, Number(actionEl.dataset.itemIndex), Number(actionEl.dataset.amount))) { saveAppState(); renderMeals(); updateTotals(); } break;
             case 'remove-item': removeFromMeal(mealIndex, Number(actionEl.dataset.itemIndex)); break;
@@ -612,7 +613,10 @@ function renderDishItem(dish, mealIndex, itemIndex) {
                         P: ${dishStats.protein}g M: ${dishStats.fat}g UH: ${dishStats.carbs}g
                     </div>
                     ${dish.notes ? `
-                        <div class="meal-food-notes" style="font-size: 0.8rem; font-style: italic; color: var(--accent-green); margin-top: 4px;">
+                        <button class="btn-recipe-toggle" data-action="toggle-dish-recipe" data-item-index="${itemIndex}">
+                            ${dish.showRecipe ? '📖 Sakrij recept' : '📖 Prikaži recept'}
+                        </button>
+                        <div class="meal-food-notes accordion-content ${dish.showRecipe ? 'open' : ''}">
                             📝 ${sanitizeHTML(dish.notes)}
                         </div>
                     ` : ''}
@@ -691,6 +695,14 @@ function toggleDishDetails(mealIndex, itemIndex) {
     const item = meals[mealIndex].items[itemIndex];
     if (item && item.isDish) {
         item.showDetails = !item.showDetails;
+        renderMeals();
+    }
+}
+
+function toggleDishRecipe(mealIndex, itemIndex) {
+    const item = meals[mealIndex].items[itemIndex];
+    if (item && item.isDish) {
+        item.showRecipe = !item.showRecipe;
         renderMeals();
     }
 }
@@ -777,7 +789,8 @@ function addDishToMeal(savedMeal) {
         servingGrams: totalGrams, 
         servingPercent: 100, 
         ingredients, 
-        showDetails: false 
+        showDetails: false,
+        showRecipe: false
     };
 
     meals[activeMealIndex].items.push(dishItem);
@@ -942,7 +955,10 @@ function renderSavedMeals() {
                     <div class="saved-meal-calories" style="font-weight: bold; color: var(--accent-green);">${stats.calories} kcal</div>
                 </div>
                 ${meal.notes ? `
-                    <div class="saved-meal-recipe" style="font-size: 0.85rem; margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.2); border-left: 3px solid var(--accent-green); border-radius: 4px; overflow-wrap: break-word;">
+                    <button class="btn-recipe-toggle" data-action="toggle-recipe">
+                        ${meal.showRecipe ? '📖 Sakrij recept' : '📖 Prikaži recept'}
+                    </button>
+                    <div class="saved-meal-recipe accordion-content ${meal.showRecipe ? 'open' : ''}">
                         <strong>Recept:</strong> ${sanitizeHTML(meal.notes)}
                     </div>
                 ` : ''}
@@ -982,6 +998,10 @@ function handleSavedMealAction(event) {
     switch (action) {
         case 'add':
             addDishToMeal(meal);
+            break;
+        case 'toggle-recipe':
+            meal.showRecipe = !meal.showRecipe;
+            renderSavedMeals();
             break;
         case 'edit':
             editSavedMeal(meal.id);

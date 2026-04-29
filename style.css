@@ -176,7 +176,7 @@ body {
 .meal-actions-top { margin-bottom: 8px; }
 .meal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .meal-title-group { display: flex; align-items: center; gap: 10px; }
-.meal-name { font-size: 18px; font-weight: 600; color: #333; }
+.meal-name { font-size: 18px; font-weight: 600; color: #333; word-break: break-word; }
 
 .btn-clear-meal {
     background: transparent;
@@ -212,8 +212,19 @@ body {
 }
 
 .meal-food-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.meal-food-name { font-size: 14px; font-weight: 600; color: #667eea; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meal-food-name { font-size: 14px; font-weight: 600; color: #667eea; word-break: break-word; }
 .meal-food-macros { font-size: 11px; color: #999; font-weight: 500; }
+
+.meal-food-notes {
+    font-size: 12px;
+    color: #059669;
+    background: #ecfdf5;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 3px solid var(--accent-green);
+    word-break: break-word;
+    margin-top: 5px;
+}
 .meal-food-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
 .quantity-btn {
@@ -346,8 +357,40 @@ body {
 .saved-meal { background: #f0f4ff; border-radius: 12px; padding: 15px; border: 2px solid #e0e0e0; transition: all 0.2s; }
 .saved-meal:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
 .saved-meal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px; }
-.saved-meal-name { font-size: 16px; font-weight: 700; color: #667eea; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.saved-meal-name { font-size: 16px; font-weight: 700; color: #667eea; word-break: break-word; flex: 1; }
 .saved-meal-calories { font-size: 15px; font-weight: 700; color: #764ba2; flex-shrink: 0; }
+
+.saved-meal-recipe {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #4b5563;
+    background: #ffffff;
+    border-left: 4px solid var(--accent-green);
+    padding: 10px 12px;
+    border-radius: 4px 8px 8px 4px;
+    margin: 8px 0;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    word-break: break-word;
+}
+
+.accordion-content {
+    display: none;
+    overflow: hidden;
+}
+
+.accordion-content.open {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-recipe-toggle {
+    background: none; border: none; color: #667eea; font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 0; display: block; text-align: left;
+}
 .saved-meal-macros { display: flex; gap: 10px; margin-bottom: 12px; font-size: 11px; color: #666; flex-wrap: wrap; }
 .saved-macro-item { background: white; padding: 4px 8px; border-radius: 4px; font-weight: 600; }
 .saved-meal-ingredients { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
@@ -448,8 +491,22 @@ body {
 
 .edit-food-item:hover { border-color: #667eea; box-shadow: 0 2px 8px rgba(102,126,234,0.2); }
 .edit-food-info { flex: 1; min-width: 0; }
-.edit-food-name { font-size: 16px; font-weight: 600; color: #667eea; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.edit-food-name { font-size: 16px; font-weight: 600; color: #667eea; margin-bottom: 4px; word-break: break-word; }
 .edit-food-macros { font-size: 13px; color: #999; }
+
+.recipe-textarea {
+    width: 100%;
+    border-radius: 8px;
+    padding: 12px;
+    background: #ffffff;
+    color: #1f2937;
+    border: 2px solid var(--border-color);
+    font-family: inherit;
+    font-size: 15px;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+.recipe-textarea:focus { border-color: var(--gradient-start); outline: none; }
 .edit-food-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .edit-add-section { background: #f8f9fa; border-radius: 12px; padding: 20px; border: 2px dashed #d1d5db; }
 .edit-add-section h3 { margin: 0 0 15px 0; font-size: 16px; color: #667eea; }
