@@ -205,7 +205,7 @@ function initFirebaseListeners() {
             foods = Object.keys(data).map(key => ({ id: key, ...data[key] }));
         }
         // Sortiraj po abecedi za konzistentan prikaz
-        foods.sort((a, b) => a.name.localeCompare(b.name));
+        foods.sort((a, b) => a.name.localeCompare(b.name, 'sr', { sensitivity: 'base' }));
         
         renderFoods(); // Ponovo iscrtaj listu namirnica
         if (document.getElementById('editPanel').style.display === 'flex') {
@@ -230,6 +230,7 @@ function initFirebaseListeners() {
         savedMeals = []; // Isprazni lokalnu listu
         if (data) {
             savedMeals = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+            savedMeals.sort((a, b) => a.name.localeCompare(b.name, 'sr', { sensitivity: 'base' }));
         }
         renderSavedMeals(); // Ponovo iscrtaj listu sačuvanih jela
 
